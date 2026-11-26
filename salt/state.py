@@ -23,6 +23,7 @@ except (ImportError, SyntaxError):
     # -- salt-ssh runs one execution per target, so the per-context isolation
     # contextvars provides (#63056) is not needed.
     contextvars = None
+import contextlib
 import copy
 import datetime
 import fnmatch
@@ -340,6 +341,61 @@ def ishashable(obj: object) -> bool:
     except TypeError:
         return False
     return True
+
+
+class _NoLogScrubFilter(logging.Filter):
+    """
+    Scrub log records emitted while a state with ``no_log: True`` is
+    executing.  Scoped to loggers whose name starts with one of
+    ``_SCRUB_SCOPES`` so unrelated subsystem logs still flow normally.
+
+    Widens ``no_log_mask``, which only redacted the returned
+    ``name``/``comment``/``changes``; any intermediate
+    ``log.debug``/``log.info`` emitted by the state body itself still
+    carried plain pillar values.  This filter catches those too.
+    """
+
+    _SCRUB_SCOPES = ("salt.states.", "salt.state", "salt.loaded.int.states.")
+    _PLACEHOLDER = "**********"
+
+    def filter(self, record):  # noqa: A003 -- stdlib Filter API
+        name = record.name or ""
+        if not any(name.startswith(scope) for scope in self._SCRUB_SCOPES):
+            return True
+        record.msg = self._PLACEHOLDER
+        record.args = ()
+        return True
+
+
+@contextlib.contextmanager
+def _no_log_scope(low: LowChunk):
+    """
+    Context manager: while a state low-chunk with ``no_log: True`` is
+    executing, scrub records from ``salt.states.*`` loggers at each
+    root handler before they are formatted.
+
+    No-op when ``no_log`` is unset or falsy, so the overhead on normal
+    states is a single attribute lookup.
+    """
+    if not low.get("no_log"):
+        yield
+        return
+    flt = _NoLogScrubFilter()
+    attached = []
+    for handler in list(logging.root.handlers):
+        try:
+            handler.addFilter(flt)
+            attached.append(handler)
+        except Exception:  # pylint: disable=broad-except
+            continue
+    try:
+        yield
+    finally:
+        for handler in attached:
+            try:
+                handler.removeFilter(flt)
+            except Exception:  # pylint: disable=broad-except
+                continue
 
 
 def mock_ret(cdata: dict[str, Any]) -> dict[str, Any]:
@@ -2511,9 +2567,15 @@ class State:
                     else:
                         self.format_slots(cdata)
                         with salt.utils.files.set_umask(low.get("__umask__")):
-                            ret = self.states[cdata["full"]](
-                                *cdata["args"], **cdata["kwargs"]
-                            )
+                            # Scope a logging filter on salt.states.* for
+                            # the state body so
+                            # ``log.debug("secret is %s", pillar_val)``
+                            # inside a state with no_log: True is
+                            # scrubbed, not just the final return.
+                            with _no_log_scope(low):
+                                ret = self.states[cdata["full"]](
+                                    *cdata["args"], **cdata["kwargs"]
+                                )
                 self.states.inject_globals = {}
             if "check_cmd" in low:
                 state_check_cmd = "{0[state]}.mod_run_check_cmd".format(low)

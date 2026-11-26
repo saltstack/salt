@@ -5,6 +5,7 @@ Extract the pillar data for this minion
 import copy
 import logging
 import os
+import warnings
 from collections import OrderedDict
 from collections.abc import Mapping
 
@@ -21,6 +22,36 @@ from salt.exceptions import CommandExecutionError
 __proxyenabled__ = ["*"]
 
 log = logging.getLogger(__name__)
+
+# Once an ``unmask=`` kwarg has been passed to a given pillar function in this
+# process, the DeprecationWarning for it has been emitted -- don't spam the
+# operator.  Tracked per-function name so each distinct caller still gets one
+# warning.
+_UNMASK_DEPRECATION_EMITTED: set[str] = set()
+
+
+def _warn_unmask_deprecated(func_name, unmask):
+    """Emit a one-shot DeprecationWarning for ``unmask=`` on a pillar func.
+
+    Pillar values are always real; ``pillar_mask_output`` only redacts log
+    output.  The ``unmask`` kwarg is retained for API compatibility but has no
+    effect.
+    """
+    if unmask is None:
+        return
+    if func_name in _UNMASK_DEPRECATION_EMITTED:
+        return
+    _UNMASK_DEPRECATION_EMITTED.add(func_name)
+    warnings.warn(
+        (
+            "pillar.{fn}: the 'unmask' keyword argument is deprecated and now "
+            "has no effect.  Pillar values are always returned unmasked; "
+            "the 'pillar_mask_output' config option only redacts them from "
+            "log output."
+        ).format(fn=func_name),
+        DeprecationWarning,
+        stacklevel=3,
+    )
 
 
 def get(
@@ -129,6 +160,7 @@ def get(
         salt '*' pillar.get pkg:apache
         salt '*' pillar.get abc::def|ghi delimiter='|'
     """
+    _warn_unmask_deprecated("get", unmask)
     if default == NOT_SET:
         default = KeyError
     if not __opts__.get("pillar_raise_on_missing"):
@@ -145,9 +177,6 @@ def get(
         else items(saltenv=saltenv, pillarenv=pillarenv)
     )
 
-    if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
-
     if merge:
         if isinstance(default, dict):
             ret = salt.utils.data.traverse_dict_and_list(
@@ -155,12 +184,9 @@ def get(
             )
             if isinstance(ret, Mapping):
                 default = copy.deepcopy(default)
-                merged = salt.utils.dictupdate.update(
+                return salt.utils.dictupdate.update(
                     default, ret, merge_lists=opt_merge_lists
                 )
-                if unmask:
-                    return salt.utils.secret.expose(merged)
-                return salt.utils.secret.serial(merged)
             else:
                 log.error(
                     "pillar.get: Default (%s) is a dict, but the returned "
@@ -177,9 +203,7 @@ def get(
             if isinstance(ret, list):
                 default = copy.deepcopy(default)
                 default.extend([x for x in ret if x not in default])
-                if unmask:
-                    return salt.utils.secret.expose(default)
-                return salt.utils.secret.serial(default)
+                return default
             else:
                 log.error(
                     "pillar.get: Default (%s) is a list, but the returned "
@@ -201,9 +225,7 @@ def get(
     if ret is KeyError:
         raise KeyError(f"Pillar key not found: {key}")
 
-    if unmask:
-        return salt.utils.secret.expose(ret)
-    return salt.utils.secret.serial(ret)
+    return ret
 
 
 def items(
@@ -267,6 +289,7 @@ def items(
 
         salt '*' pillar.items
     """
+    _warn_unmask_deprecated("items", unmask)
     # Preserve backwards compatibility
     if args:
         return item(*args, pillarenv=pillarenv, saltenv=saltenv)
@@ -302,19 +325,7 @@ def items(
         ret = pillar.compile_pillar()
     finally:
         pillar.destroy()
-    if unmask is None:
-        # VCOPS-98852: pillar_mask_output only changes items()'s *default*
-        # when the caller didn't explicitly request masked/unmasked output —
-        # it does not disable masking elsewhere (pillar.get/item/raw/ext,
-        # no_log states, or the general output safety net keep their own
-        # existing behavior regardless of this option).
-        unmask = not salt.utils.secret.mask_pillar.get() or not __opts__.get(
-            "pillar_mask_output", True
-        )
-    if unmask:
-        return salt.utils.secret.expose(ret)
-    else:
-        return salt.utils.secret.serial(ret)
+    return ret
 
 
 # Allow pillar.data to also be used to return pillar data
@@ -363,13 +374,13 @@ def data(
         salt '*' pillar.data
     """
 
+    _warn_unmask_deprecated("data", unmask)
     return items(
         *args,
         pillar=pillar,
         pillar_enc=pillar_enc,
         pillarenv=pillarenv,
         saltenv=saltenv,
-        unmask=unmask,
     )
 
 
@@ -431,6 +442,7 @@ def obfuscate(
         salt '*' pillar.obfuscate
 
     """
+    _warn_unmask_deprecated("obfuscate", unmask)
     return _obfuscate_inner(
         items(
             *args,
@@ -438,7 +450,6 @@ def obfuscate(
             pillar_enc=pillar_enc,
             pillarenv=pillarenv,
             saltenv=saltenv,
-            unmask=unmask,
         )
     )
 
@@ -505,6 +516,7 @@ def ls(
         salt '*' pillar.ls
     """
 
+    _warn_unmask_deprecated("ls", unmask)
     return list(
         items(
             *args,
@@ -512,7 +524,6 @@ def ls(
             pillar_enc=pillar_enc,
             pillarenv=pillarenv,
             saltenv=saltenv,
-            unmask=unmask,
         )
     )
 
@@ -577,6 +588,7 @@ def item(
         salt '*' pillar.item foo:bar
         salt '*' pillar.item foo bar baz
     """
+    _warn_unmask_deprecated("item", unmask)
     ret = {}
 
     if default is None:
@@ -591,9 +603,6 @@ def item(
         else items(saltenv=saltenv, pillarenv=pillarenv)
     )
 
-    if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
-
     try:
         for arg in args:
             ret[arg] = salt.utils.data.traverse_dict_and_list(
@@ -602,10 +611,7 @@ def item(
     except KeyError:
         pass
 
-    if unmask:
-        return salt.utils.secret.expose(ret)
-    else:
-        return salt.utils.secret.serial(ret)
+    return ret
 
 
 def raw(key=None, unmask=None):
@@ -633,17 +639,14 @@ def raw(key=None, unmask=None):
 
         salt '*' pillar.raw key='roles'
     """
-    if unmask is None:
-        unmask = True
+    _warn_unmask_deprecated("raw", unmask)
 
     if key:
         value = __pillar__.get(key, {})
     else:
         value = dict(__pillar__)
 
-    if unmask:
-        return salt.utils.secret.expose(value)
-    return salt.utils.secret.serial(value)
+    return value
 
 
 def ext(external, pillar=None, unmask=None):
@@ -707,6 +710,7 @@ def ext(external, pillar=None, unmask=None):
         salt '*' pillar.ext "{'git': ['master https://github.com/myuser/myrepo']}"
         salt '*' pillar.ext "{'git': [{'mybranch https://github.com/myuser/myrepo': [{'env': 'base'}]}]}"
     '''
+    _warn_unmask_deprecated("ext", unmask)
     if isinstance(external, str):
         external = salt.utils.yaml.safe_load(external)
     pillar_obj = salt.pillar.get_pillar(
@@ -723,12 +727,7 @@ def ext(external, pillar=None, unmask=None):
     finally:
         pillar_obj.destroy()
 
-    if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
-
-    if unmask:
-        return salt.utils.secret.expose(ret)
-    return salt.utils.secret.serial(ret)
+    return ret
 
 
 def keys(key, delimiter=DEFAULT_TARGET_DELIM, unmask=None):
@@ -756,9 +755,7 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM, unmask=None):
 
         salt '*' pillar.keys web:sites
     """
-    # ``unmask`` is accepted purely for API uniformity; keys themselves are
-    # never masked. Reference the parameter so static analyzers don't flag it.
-    del unmask
+    _warn_unmask_deprecated("keys", unmask)
 
     ret = salt.utils.data.traverse_dict_and_list(__pillar__, key, KeyError, delimiter)
 
@@ -875,6 +872,8 @@ def filter_by(lookup_dict, pillar, merge=None, default="default", base=None):
     ret = salt.utils.data.filter_by(
         lookup_dict=lookup_dict,
         lookup=pillar,
+        # __pillar__ is already a plain dict here, so expose() does nothing
+        # for it; it stays in case the pillar holds masked containers.
         traverse=salt.utils.secret.expose(__pillar__),
         merge=merge,
         default=default,

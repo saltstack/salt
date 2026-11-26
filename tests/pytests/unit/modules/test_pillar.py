@@ -3,7 +3,6 @@ from collections import OrderedDict
 import pytest
 
 import salt.modules.pillar as pillarmod
-import salt.utils.secret as secret
 from tests.support.mock import MagicMock, call, patch
 
 
@@ -51,7 +50,6 @@ def test_obfuscate_with_kwargs(pillar_value):
                 pillar_enc=None,
                 pillarenv=None,
                 saltenv="saltenv",
-                unmask=None,
             )
             in pillar_items_mock.mock_calls
         )
@@ -136,34 +134,28 @@ def test_pillar_get_default_merge_regression_38558():
     """Test for pillar.get(key=..., default=..., merge=True)
     Do not update the ``default`` value when using ``merge=True``.
     See: https://github.com/saltstack/salt/issues/38558
-
-    ``res`` values below are masked (VCOPS-98852: pillar.get()'s default
-    output redacts truthy int/float/bool leaves too, not just strings) — use
-    ``unmask=True`` to assert against the real values. ``default`` is a plain
-    Python literal passed in by the caller, never itself redacted, so its
-    non-mutation check still compares real values.
     """
     with patch.dict(pillarmod.__pillar__, {"l1": {"l2": {"l3": 42}}}):
 
         res = pillarmod.get(key="l1")
-        assert {"l2": {"l3": secret.REDACT_PLACEHOLDER}} == res
-        assert {"l2": {"l3": 42}} == pillarmod.get(key="l1", unmask=True)
+        assert {"l2": {"l3": 42}} == res
 
         default = {"l2": {"l3": 43}}
 
         res = pillarmod.get(key="l1", default=default)
-        assert {"l2": {"l3": secret.REDACT_PLACEHOLDER}} == res
+        assert {"l2": {"l3": 42}} == res
         assert {"l2": {"l3": 43}} == default
 
         res = pillarmod.get(key="l1", default=default, merge=True)
-        assert {"l2": {"l3": secret.REDACT_PLACEHOLDER}} == res
+        assert {"l2": {"l3": 42}} == res
         assert {"l2": {"l3": 43}} == default
 
 
-def test_items_respects_pillar_mask_output_config_option():
-    """VCOPS-98852: ``pillar_mask_output`` only changes ``pillar.items``'s
-    *default* (when the caller doesn't pass ``unmask``) — per maintainer
-    feedback on saltstack/salt#69812, it must not disable masking wholesale.
+@pytest.mark.parametrize("flag", [False, True])
+@pytest.mark.parametrize("unmask", [None, True, False])
+def test_items_ignores_pillar_mask_output_and_unmask(flag, unmask):
+    """``pillar.items`` returns the real values, whatever ``pillar_mask_output``
+    and ``unmask`` are. The option only redacts log output.
     """
     compiled = {"pin": 1234}
     pillar_obj = MagicMock()
@@ -172,50 +164,24 @@ def test_items_respects_pillar_mask_output_config_option():
     grains.value = MagicMock(return_value={})
     with patch(
         "salt.pillar.get_pillar", MagicMock(return_value=pillar_obj)
-    ), patch.object(pillarmod, "__grains__", grains, create=True):
-        with patch.dict(
-            pillarmod.__opts__,
-            {
-                "id": "minion",
-                "saltenv": "base",
-                "pillarenv": None,
-                "pillar_mask_output": False,
-            },
-        ):
-            assert pillarmod.items() == compiled
-
-        with patch.dict(
-            pillarmod.__opts__,
-            {
-                "id": "minion",
-                "saltenv": "base",
-                "pillarenv": None,
-                "pillar_mask_output": True,
-            },
-        ):
-            assert pillarmod.items() == {"pin": secret.REDACT_PLACEHOLDER}
-
-        # The caller's explicit unmask= always wins over the config default.
-        with patch.dict(
-            pillarmod.__opts__,
-            {
-                "id": "minion",
-                "saltenv": "base",
-                "pillarenv": None,
-                "pillar_mask_output": False,
-            },
-        ):
-            assert pillarmod.items(unmask=False) == {"pin": secret.REDACT_PLACEHOLDER}
-
-
-def test_pillar_get_ignores_pillar_mask_output_config_option():
-    """VCOPS-98852: ``pillar.get`` must keep masking by default regardless of
-    ``pillar_mask_output`` — that option only affects ``pillar.items``.
-    """
-    with patch.dict(pillarmod.__pillar__, {"pin": 1234}), patch.dict(
-        pillarmod.__opts__, {"pillar_mask_output": False}
+    ), patch.object(pillarmod, "__grains__", grains, create=True), patch.dict(
+        pillarmod.__opts__,
+        {
+            "id": "minion",
+            "saltenv": "base",
+            "pillarenv": None,
+            "pillar_mask_output": flag,
+        },
     ):
-        assert pillarmod.get(key="pin") == secret.REDACT_PLACEHOLDER
+        assert pillarmod.items(unmask=unmask) == compiled
+
+
+@pytest.mark.parametrize("flag", [False, True])
+def test_pillar_get_ignores_pillar_mask_output_config_option(flag):
+    with patch.dict(pillarmod.__pillar__, {"pin": 1234}), patch.dict(
+        pillarmod.__opts__, {"pillar_mask_output": flag}
+    ):
+        assert pillarmod.get(key="pin") == 1234
 
 
 def test_pillar_get_default_merge_regression_39062():
@@ -279,8 +245,8 @@ def test_ls_pass_kwargs(pillar_value):
         assert ls == ["a", "b"]
 
 
-def test_ls_accepts_and_forwards_unmask(pillar_value):
-    """``pillar.ls`` accepts ``unmask`` and forwards it to ``items``."""
+def test_ls_accepts_unmask_and_does_not_forward_it(pillar_value):
+    """``pillar.ls`` accepts ``unmask``, which has no effect."""
     with patch(
         "salt.modules.pillar.items", MagicMock(return_value=pillar_value)
     ) as items_mock:
@@ -292,14 +258,13 @@ def test_ls_accepts_and_forwards_unmask(pillar_value):
                 pillar_enc=None,
                 pillarenv=None,
                 saltenv=None,
-                unmask=True,
             )
             in items_mock.mock_calls
         )
 
 
-def test_obfuscate_forwards_unmask(pillar_value):
-    """``pillar.obfuscate`` forwards ``unmask`` to ``items``."""
+def test_obfuscate_accepts_unmask_and_does_not_forward_it(pillar_value):
+    """``pillar.obfuscate`` accepts ``unmask``, which has no effect."""
     with patch(
         "salt.modules.pillar.items", MagicMock(return_value=pillar_value)
     ) as items_mock:
@@ -310,7 +275,6 @@ def test_obfuscate_forwards_unmask(pillar_value):
                 pillar_enc=None,
                 pillarenv=None,
                 saltenv=None,
-                unmask=False,
             )
             in items_mock.mock_calls
         )
@@ -332,20 +296,15 @@ def test_raw_default_returns_unmasked_values():
         assert pillarmod.raw(key="secret") == "swordfish"
 
 
-def test_raw_unmask_false_returns_masked_values():
-    """``pillar.raw(unmask=False)`` returns masked values."""
+def test_raw_returns_real_values_whatever_unmask_is():
+    """``pillar.raw(unmask=False)`` still returns the real values."""
     with patch.dict(pillarmod.__pillar__, {"secret": "swordfish"}):
-        masked = pillarmod.raw(unmask=False)
-        assert masked["secret"] != "swordfish"
-        assert "*" in masked["secret"]
-
-        masked_key = pillarmod.raw(key="secret", unmask=False)
-        assert masked_key != "swordfish"
-        assert "*" in masked_key
+        assert pillarmod.raw(unmask=False) == {"secret": "swordfish"}
+        assert pillarmod.raw(key="secret", unmask=False) == "swordfish"
 
 
-def test_ext_forwards_unmask_to_expose():
-    """``pillar.ext(unmask=True)`` returns unmasked compiled pillar."""
+def test_ext_returns_real_values_whatever_unmask_is():
+    """``pillar.ext`` returns the compiled pillar, ``unmask`` has no effect."""
     compiled = {"a": "plain", "b": "secret"}
     pillar_obj = MagicMock()
     pillar_obj.compile_pillar = MagicMock(return_value=compiled)
@@ -358,11 +317,8 @@ def test_ext_forwards_unmask_to_expose():
     ), patch.object(
         pillarmod, "__grains__", grains, create=True
     ):
-        unmasked = pillarmod.ext({"libvirt": "_"}, unmask=True)
-        assert unmasked == compiled
-        masked = pillarmod.ext({"libvirt": "_"}, unmask=False)
-        for key in compiled:
-            assert "*" in masked[key]
+        assert pillarmod.ext({"libvirt": "_"}, unmask=True) == compiled
+        assert pillarmod.ext({"libvirt": "_"}, unmask=False) == compiled
 
 
 @pytest.mark.parametrize("func", ["items", "ext"])

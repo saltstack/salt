@@ -12,6 +12,7 @@ import time
 import traceback
 from collections import OrderedDict
 
+import salt._logging.filters.pillar
 import salt.cache
 import salt.channel.client
 import salt.fileclient
@@ -172,6 +173,16 @@ class RemotePillarMixin:
     Common remote pillar functionality
     """
 
+    def _register_pillar(self, ret_pillar):
+        """
+        With ``pillar_mask_output`` enabled, register the received pillar values
+        so that they are redacted from log output. The pillar is returned as it
+        is.
+        """
+        if self.opts.get("pillar_mask_output", False):
+            salt._logging.filters.pillar.register(ret_pillar)
+        return ret_pillar
+
     def get_ext_pillar_extra_minion_data(self, opts):
         """
         Returns the extra data from the minion's opts dict (the config file).
@@ -318,8 +329,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        ret_pillar = salt.utils.secret.hide(ret_pillar)
-        return ret_pillar
+        return self._register_pillar(ret_pillar)
 
     async def aclose(self):
         """Async-aware teardown.
@@ -471,7 +481,7 @@ class RemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        return salt.utils.secret.hide(ret_pillar)
+        return self._register_pillar(ret_pillar)
 
     def destroy(self):
         if hasattr(self, "_closing") and self._closing:
@@ -1348,6 +1358,12 @@ class Pillar:
                 pillar.setdefault("_errors", []).extend(decrypt_errors)
             self.pillar_data.update(pillar)
             self._update_loader_packs()
+            if self.opts.get("pillar_mask_output", False) and self.opts.get(
+                "__role"
+            ) not in ("master", "syndic"):
+                # A master compiles the pillar of every minion, so only the
+                # processes that use the pillar themselves register it.
+                salt._logging.filters.pillar.register(pillar)
             return pillar
         finally:
             salt.utils.secret.mask_pillar.reset(_token)
