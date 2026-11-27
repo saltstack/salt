@@ -57,6 +57,9 @@ set the reload value to True:
         - watch:
           - pkg: redis
 
+A watch requisite restarts or reloads the service also when the service was
+already running and the state only enabled or disabled it.
+
 .. note::
 
     More details regarding ``watch`` can be found in the
@@ -551,6 +554,12 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
             ret.update(_enable(name, None, **kwargs))
         elif enable is False and before_toggle_enable_status:
             ret.update(_disable(name, None, **kwargs))
+        # The service was already running, so this path neither restarts nor
+        # reloads it. When enabling or disabling the service made changes, set
+        # force_mod_watch, so that a watch requisite which fired still runs
+        # mod_watch, which restarts or reloads the service.
+        if ret.get("changes") and ret.get("result", True):
+            ret["force_mod_watch"] = True
         return ret
 
     # Run the tests

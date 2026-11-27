@@ -132,6 +132,7 @@ def test_running():
             "comment": "The service salt is already running",
             "name": "salt",
             "result": True,
+            "force_mod_watch": True,
         },
         {
             "changes": {},
@@ -360,6 +361,60 @@ def test_running_in_offline_mode():
             "result": True,
             "name": name,
         }
+
+
+def test_running_sets_force_mod_watch_when_enable_toggled_on_running_service():
+    """
+    For a service which is already running but has to be enabled, the result
+    sets force_mod_watch. Enabling the service makes changes but neither restarts
+    nor reloads it, so the flag asks the state system to run mod_watch when a
+    watched state changed.
+    """
+    tmock = MagicMock(return_value=True)
+    enable_mock = MagicMock(return_value={"changes": {"salt": True}})
+    with patch.object(service, "_available", tmock), patch.dict(
+        service.__opts__, {"test": False}
+    ), patch.dict(
+        service.__salt__,
+        {
+            "service.enabled": MagicMock(side_effect=[False, True]),
+            "service.status": tmock,
+        },
+    ), patch.object(
+        service, "_enable", enable_mock
+    ):
+        ret = service.running("salt", True)
+    assert ret["changes"] == {"salt": True}
+    assert ret["result"] is True
+    assert ret.get("force_mod_watch") is True
+
+
+def test_running_omits_force_mod_watch_on_fresh_start():
+    """
+    For a service which was not running, the result does not set
+    force_mod_watch. Starting the service already loads its configuration, so
+    mod_watch would only restart it a second time.
+    """
+    tmock = MagicMock(return_value=True)
+    fmock = MagicMock(return_value=False)
+    enable_mock = MagicMock(return_value={"changes": {"salt": True}})
+    with patch.object(service, "_available", tmock), patch.object(
+        salt.utils.platform, "is_windows", fmock
+    ), patch.object(salt.utils.platform, "is_darwin", fmock), patch.dict(
+        service.__opts__, {"test": False}
+    ), patch.dict(
+        service.__salt__,
+        {
+            "service.status": MagicMock(side_effect=[False, True]),
+            "service.enabled": MagicMock(side_effect=[False, True]),
+            "service.start": MagicMock(return_value="stack"),
+        },
+    ), patch.object(
+        service, "_enable", enable_mock
+    ):
+        ret = service.running("salt", True)
+    assert ret["result"] is True
+    assert "force_mod_watch" not in ret
 
 
 def test_dead():
