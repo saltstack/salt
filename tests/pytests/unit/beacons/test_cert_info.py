@@ -1,5 +1,7 @@
 # Python libs
 
+import datetime
+import ipaddress
 import logging
 
 import pytest
@@ -9,14 +11,6 @@ import salt.beacons.cert_info as cert_info
 from tests.support.mock import mock_open, patch
 
 log = logging.getLogger(__name__)
-
-pytestmark = [
-    pytest.mark.skipif(
-        not cert_info.HAS_X509_EXTENSION_API,
-        reason="pyOpenSSL X509.get_extension API was removed in pyOpenSSL 25",
-    ),
-]
-
 
 _TEST_CERT = """
 -----BEGIN CERTIFICATE-----
@@ -106,3 +100,50 @@ def test_cert_information():
         ]
         ret = cert_info.beacon(config)
         assert ret == _expected_return
+
+
+def test_virtual():
+    assert cert_info.__virtual__() == "cert_info"
+
+
+def test_cert_information_generated_cert(tmp_path):
+    x509 = pytest.importorskip("cryptography.x509")
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.hazmat.primitives.serialization import Encoding
+
+    key = ec.generate_private_key(ec.SECP256R1())
+    name = x509.Name([x509.NameAttribute(x509.NameOID.COMMON_NAME, "salt.local")])
+    not_before = datetime.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(1234)
+        .not_valid_before(not_before)
+        .not_valid_after(not_before + datetime.timedelta(days=36500))
+        .add_extension(x509.BasicConstraints(ca=True, path_length=0), critical=True)
+        .add_extension(
+            x509.SubjectAlternativeName(
+                [
+                    x509.DNSName("salt.local"),
+                    x509.IPAddress(ipaddress.ip_address("127.0.0.1")),
+                ]
+            ),
+            critical=False,
+        )
+        .sign(key, hashes.SHA256())
+    )
+    cert_path = tmp_path / "cert.pem"
+    cert_path.write_bytes(cert.public_bytes(Encoding.PEM))
+
+    ret = cert_info.beacon([{"files": [str(cert_path)]}, {"notify_days": -1}])
+
+    assert ret[0]["certificates"][0]["extensions"] == [
+        {"ext_name": "basicConstraints", "ext_data": "CA:TRUE, pathlen:0"},
+        {
+            "ext_name": "subjectAltName",
+            "ext_data": "DNS:salt.local, IP Address:127.0.0.1",
+        },
+    ]
