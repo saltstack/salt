@@ -22,12 +22,9 @@ pytestmark = [
 @pytest.mark.parametrize("multiprocessing", [False, True])
 @pytest.mark.parametrize("parallel_startup", [False, True])
 def test_subproxies_keep_their_own_connections(
-    temp_salt_master, request, tmp_path, multiprocessing, parallel_startup
+    temp_salt_master, tmp_path, multiprocessing, parallel_startup
 ):
     """Dunders remain device-specific through grains/pillar refresh and reload."""
-    if request.config.getoption("--transport") == "tcp":
-        pytest.skip("Deltaproxy under the TCP transport is not working. See #61367")
-
     salt_master = temp_salt_master
     control_id = random_string("connection-control-")
     hosts = {f"{control_id}-{n}": f"10.0.0.1{n}" for n in (1, 2, 3)}
