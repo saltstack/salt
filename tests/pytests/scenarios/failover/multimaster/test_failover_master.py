@@ -41,7 +41,6 @@ def test_pki(salt_mm_failover_master_1, salt_mm_failover_master_2, caplog):
             f"{mm_master_1_addr}:{mm_master_1_port}",
             f"{mm_master_2_addr}:{mm_master_2_port}",
         ],
-        "publish_port": salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
         "master_alive_interval": 5,
         "master_tries": -1,
