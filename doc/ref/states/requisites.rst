@@ -392,7 +392,9 @@ exactly like the ``require`` requisite (the watching state will execute if
    the normal run do not subsume the work of ``mod_watch``, so the state
    system must invoke ``mod_watch`` as well. The ``changes`` and
    ``comment`` returned by ``mod_watch`` are merged into the normal run's
-   result and the combined ``result`` is ``True`` only if both succeeded.
+   result. The combined ``result`` is ``False`` if either run failed,
+   ``None`` in test mode if either run would make changes, and ``True``
+   otherwise.
    Setting ``force_mod_watch`` is only meaningful for state modules whose
    ``mod_watch`` performs work orthogonal to the normal run (for example,
    :py:func:`docker_container.running

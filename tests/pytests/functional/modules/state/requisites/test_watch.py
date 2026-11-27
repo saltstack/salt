@@ -278,3 +278,27 @@ def test_watch_fires_when_force_mod_watch_is_set(state, state_tree):
         assert ret[watcher].changes["Requisites with changes"] == ["test: trigger"]
         assert "Watch statement fired." in ret[watcher].comment
         assert ret[watcher].result is True
+
+
+def test_watch_force_mod_watch_keeps_test_mode_result(state, state_tree):
+    """
+    In test mode, a watcher which sets force_mod_watch keeps the None result of its
+    normal run after the result of mod_watch is merged in. None means that the state
+    would make changes, while False would report it as failed.
+    """
+    sls_contents = """
+    trigger:
+      test.succeed_with_changes
+
+    watcher:
+      test.succeed_with_changes:
+        - force_mod_watch: True
+        - watch:
+          - test: trigger
+    """
+    watcher = "test_|-watcher_|-watcher_|-succeed_with_changes"
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite", test=True)
+        assert "Requisites with changes" in ret[watcher].changes
+        assert "Watch statement fired." in ret[watcher].comment
+        assert ret[watcher].result is None
