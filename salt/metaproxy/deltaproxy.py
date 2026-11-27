@@ -31,6 +31,7 @@ import salt.serializers.msgpack
 import salt.syspaths
 import salt.utils.args
 import salt.utils.context
+import salt.utils.ctx
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.error
@@ -81,7 +82,7 @@ def attach_req_channel(proxy_minion, proxy_opts, io_loop):
     return proxy_minion.req_channel
 
 
-async def gather_subproxies(waitfor, ids):
+async def gather_subproxies(waitfor, ids, opts=None):
     """
     Await every sub-proxy initialisation coroutine and return the results of
     the ones that succeeded.
@@ -98,11 +99,12 @@ async def gather_subproxies(waitfor, ids):
     collected = []
     for _id, result in zip(ids, results):
         if isinstance(result, BaseException):
-            log.error(
-                "An exception occured during initialization for %s, skipping: %s",
-                _id,
-                result,
-            )
+            with salt.utils.ctx.subproxy_log_context(opts or {}, child_id=_id):
+                log.error(
+                    "An exception occured during initialization for %s, skipping: %s",
+                    _id,
+                    result,
+                )
             continue
         collected.append(result)
     return collected
@@ -428,7 +430,9 @@ async def post_master_init(self, master):
                 )
             )
 
-        results = await gather_subproxies(waitfor, self.opts["proxy"].get("ids", []))
+        results = await gather_subproxies(
+            waitfor, self.opts["proxy"].get("ids", []), self.opts
+        )
 
         _failed = self.opts["proxy"].get("ids", [])[:]
         for sub_proxy_data in results:
@@ -454,11 +458,12 @@ async def post_master_init(self, master):
                     _id, uid, self.opts, self.proxy, self.utils
                 )
             except Exception as exc:  # pylint: disable=broad-except
-                log.error(
-                    "An exception occured during initialization for %s, skipping: %s",
-                    _id,
-                    exc,
-                )
+                with salt.utils.ctx.subproxy_log_context(self.opts, child_id=_id):
+                    log.error(
+                        "An exception occured during initialization for %s, skipping: %s",
+                        _id,
+                        exc,
+                    )
                 _failed.append(_id)
                 continue
             minion_id = sub_proxy_data["proxy_opts"].get("id")
@@ -492,6 +497,11 @@ async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils
     to know which master they connected to) for the sub proxy minions.
     """
 
+    with salt.utils.ctx.subproxy_log_context(opts, child_id=minion_id):
+        return await _initialize_subproxy(minion_id, uid, opts, main_proxy, main_utils)
+
+
+async def _initialize_subproxy(minion_id, uid, opts, main_proxy, main_utils):
     proxy_grains = {}
     proxy_pillar = {}
 
@@ -528,6 +538,15 @@ async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils
 
     # Remove ids
     proxyopts["proxy"].pop("ids", None)
+    if "log_file" in proxyopts["proxy"]:
+        # Keep the logging option out of the driver settings without changing
+        # the original pillar data.
+        proxyopts["proxy"] = proxyopts["proxy"].copy()
+        log_file = proxyopts["proxy"].pop("log_file")
+        if log_file is not None:
+            salt._logging.register_subproxy_log_file(
+                minion_id, log_file, opts.get("user")
+            )
 
     proxyopts.update(
         {
@@ -698,23 +717,28 @@ def target(cls, minion_instance, opts, data, connected, creds_map):
     Calling _thread_multi_return or _thread_return
     depending on a single or multiple commands.
     """
-    log.debug(
-        "Deltaproxy minion_instance %s(ID: %s). Target: %s",
-        minion_instance,
-        minion_instance.opts["id"],
-        opts["id"],
-    )
-    if creds_map:
-        salt.crypt.AsyncAuth.creds_map = creds_map
+    # Threads do not inherit the publisher's context. Set it again at the
+    # worker entry point for both threaded and multiprocess jobs.
+    with salt.utils.ctx.subproxy_log_context(opts, data=data):
+        log.debug(
+            "Deltaproxy minion_instance %s(ID: %s). Target: %s",
+            minion_instance,
+            minion_instance.opts["id"],
+            opts["id"],
+        )
+        if creds_map:
+            salt.crypt.AsyncAuth.creds_map = creds_map
 
-    if not hasattr(minion_instance, "proc_dir"):
-        uid = salt.utils.user.get_uid(user=opts.get("user", None))
-        minion_instance.proc_dir = salt.minion.get_proc_dir(opts["cachedir"], uid=uid)
+        if not hasattr(minion_instance, "proc_dir"):
+            uid = salt.utils.user.get_uid(user=opts.get("user", None))
+            minion_instance.proc_dir = salt.minion.get_proc_dir(
+                opts["cachedir"], uid=uid
+            )
 
-    if isinstance(data["fun"], (tuple, list)):
-        ProxyMinion._thread_multi_return(minion_instance, opts, data)
-    else:
-        ProxyMinion._thread_return(minion_instance, opts, data)
+        if isinstance(data["fun"], (tuple, list)):
+            ProxyMinion._thread_multi_return(minion_instance, opts, data)
+        else:
+            ProxyMinion._thread_return(minion_instance, opts, data)
 
 
 def thread_return(cls, minion_instance, opts, data):
@@ -1103,8 +1127,11 @@ async def handle_payload(self, payload):
         for _id in sub_ids:
             if _id in self.deltaproxy_objs:
                 instance = self.deltaproxy_objs[_id]
-                if instance._target_load(payload["load"]):
-                    await instance._handle_decoded_payload(payload["load"])
+                with salt.utils.ctx.subproxy_log_context(
+                    instance.opts, child_id=_id, data=payload["load"]
+                ):
+                    if instance._target_load(payload["load"]):
+                        await instance._handle_decoded_payload(payload["load"])
             else:
                 log.warning("Proxy minion %s is not loaded, skipping.", _id)
 
@@ -1299,6 +1326,7 @@ def subproxy_tune_in(proxy_minion, start=True):
     # cleanup.  Hand the registration to the sub-proxy's own io_loop -- the
     # loop that is actually run -- via the thread-safe
     # ``call_soon_threadsafe``, so the timers bind to that loop instead.
-    proxy_minion.io_loop.call_soon_threadsafe(_start_periodics)
-    proxy_minion._state_run()
+    with salt.utils.ctx.subproxy_log_context(proxy_minion.opts):
+        proxy_minion.io_loop.call_soon_threadsafe(_start_periodics)
+        proxy_minion._state_run()
     return proxy_minion

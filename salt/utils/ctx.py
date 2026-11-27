@@ -28,3 +28,14 @@ def get_request_context():
     Get the data from the current request context.
     """
     return request_ctxvar.get({})
+
+
+def subproxy_log_context(opts, *, child_id=None, data=None):
+    """Attribute logs to a DeltaProxy child without modifying a shared job load."""
+    if child_id is None:
+        if not opts.get("subproxy"):
+            return contextlib.nullcontext()
+        child_id = opts["id"]
+    return request_context(
+        {"data": dict(data or {}, id=child_id), "opts": opts, "subproxy_id": child_id}
+    )

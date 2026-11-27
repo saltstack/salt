@@ -30,10 +30,12 @@ import salt.utils.ctx
 from salt._logging.handlers import DeferredStreamHandler  # isort:skip
 from salt._logging.handlers import RotatingFileHandler  # isort:skip
 from salt._logging.handlers import StreamHandler  # isort:skip
+from salt._logging.handlers import SubproxyLogFileHandler  # isort:skip
 from salt._logging.handlers import SysLogHandler  # isort:skip
 from salt._logging.handlers import WatchedFileHandler  # isort:skip
 from salt._logging.mixins import LoggingMixinMeta  # isort:skip
 from salt.exceptions import LoggingRuntimeError  # isort:skip
+from salt.exceptions import SaltSystemExit  # isort:skip
 from salt.utils.immutabletypes import freeze, ImmutableDict  # isort:skip
 from salt.utils.textformat import TextFormat  # isort:skip
 
@@ -261,22 +263,16 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
         if extra is None:
             extra = {}
 
-        current_jid = salt.utils.ctx.get_request_context().get("data", {}).get("jid")
-        log_fmt_jid = (
-            salt.utils.ctx.get_request_context()
-            .get("opts", {})
-            .get("log_fmt_jid", None)
-        )
+        request_context = salt.utils.ctx.get_request_context()
+        data = request_context.get("data", {})
+        opts = request_context.get("opts", {})
+        current_jid = data.get("jid")
+        log_fmt_jid = opts.get("log_fmt_jid")
+        current_minion_id = data.get("id")
+        log_fmt_minion_id = opts.get("log_fmt_minion_id")
 
-        current_minion_id = (
-            salt.utils.ctx.get_request_context().get("data", {}).get("id")
-        )
-
-        log_fmt_minion_id = (
-            salt.utils.ctx.get_request_context()
-            .get("opts", {})
-            .get("log_fmt_minion_id")
-        )
+        if (subproxy_id := request_context.get("subproxy_id")) is not None:
+            extra["subproxy_id"] = subproxy_id
 
         if current_jid is not None:
             extra["jid"] = current_jid
@@ -361,12 +357,12 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
 
         jid = extra.pop("jid", "")
         if jid:
-            log_fmt_jid = extra.pop("log_fmt_jid")
+            log_fmt_jid = extra.pop("log_fmt_jid", DFLT_LOG_FMT_JID)
             jid = log_fmt_jid % {"jid": jid}
 
         minion_id = extra.pop("minion_id", "")
         if minion_id:
-            log_fmt_minion_id = extra.pop("log_fmt_minion_id")
+            log_fmt_minion_id = extra.pop("log_fmt_minion_id", DFLT_LOG_FMT_MINION_ID)
             minion_id = log_fmt_minion_id % {"minion_id": minion_id}
 
         if not extra:
@@ -725,6 +721,7 @@ def setup_logfile_handler(
     max_bytes=0,
     backup_count=0,
     user=None,
+    subproxy_log_paths=None,
 ):
     """
     Setup the log file handler
@@ -894,9 +891,58 @@ def setup_logfile_handler(
     formatter = logging.Formatter(log_format, datefmt=date_format)
 
     handler.setFormatter(formatter)
+    if subproxy_log_paths is not None:
+        handler = SubproxyLogFileHandler(handler, subproxy_log_paths)
     logging.root.addHandler(handler)
 
     setup_logfile_handler.__handler__ = handler
+
+
+def _subproxy_log_paths(opts):
+    """Keep destinations registered by the controller when workers fork."""
+    if opts.get("metaproxy") != "deltaproxy":
+        return None
+    cached = getattr(_subproxy_log_paths, "_cache", None)
+    if cached is not None and cached[0] is opts:
+        return cached[1]
+    paths = {}
+    if isinstance(opts, ImmutableDict):
+        _subproxy_log_paths._cache = (opts, paths)
+    return paths
+
+
+def register_subproxy_log_file(child_id, path, user):
+    """Route a child's records to its configured absolute local logfile."""
+    import salt.utils.files
+    import salt.utils.user
+    import salt.utils.verify
+
+    handler = get_logfile_handler()
+    if not isinstance(handler, SubproxyLogFileHandler):
+        return
+    if not isinstance(path, str) or not os.path.isabs(path):
+        log.warning("Invalid DeltaProxy log file for %s: %r", child_id, path)
+        return
+
+    try:
+        path = os.path.realpath(path)
+        controller_path = getattr(handler.fallback, "baseFilename", None)
+        if (controller_path and path == os.path.realpath(controller_path)) or any(
+            other_id != child_id and other_path == path
+            for other_id, other_path in handler.paths.items()
+        ):
+            log.warning("Duplicate DeltaProxy log file for %s: %s", child_id, path)
+            return
+        if os.path.exists(path) and not os.path.isfile(path):
+            raise OSError("log destination is not a regular file")
+        with salt.utils.files.set_umask(0o027):
+            salt.utils.verify.verify_log_files(
+                [path], user or salt.utils.user.get_user()
+            )
+    except (OSError, SaltSystemExit, ValueError) as exc:
+        log.warning("Unable to prepare DeltaProxy log file %s: %s", path, exc)
+        return
+    handler.paths[child_id] = path
 
 
 def get_extended_logging_handlers():
@@ -1036,6 +1082,7 @@ def setup_logging():
                 max_bytes=opts["log_rotate_max_bytes"],
                 backup_count=opts["log_rotate_backup_count"],
                 user=opts["user"],
+                subproxy_log_paths=_subproxy_log_paths(opts),
             )
         else:
             setup_logfile_handler.__handler__ = logging.NullHandler()

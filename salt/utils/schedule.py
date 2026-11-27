@@ -33,6 +33,7 @@ import salt.minion
 import salt.payload
 import salt.syspaths
 import salt.utils.args
+import salt.utils.ctx
 import salt.utils.error
 import salt.utils.event
 import salt.utils.files
@@ -763,6 +764,12 @@ class Schedule:
         """
         Execute this method in a multiprocess or thread
         """
+        with salt.utils.ctx.subproxy_log_context(self.opts, data={"jid": jid}):
+            return self._execute_scheduled_func(
+                multiprocessing_enabled, func, data, jid
+            )
+
+    def _execute_scheduled_func(self, multiprocessing_enabled, func, data, jid):
         if (
             salt.utils.platform.spawning_platform()
             or self.opts.get("transport") == "zeromq"
