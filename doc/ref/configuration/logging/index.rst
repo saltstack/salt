@@ -241,6 +241,11 @@ these custom LogRecord attributes that include padding and enclosing brackets
     It is recommended to include ``%(jid)s`` and ``%(minion_id)s`` in the log
     format to identify messages that relate to specific jobs and minions.
 
+    For DeltaProxy, ``%(minion_id)s`` identifies the sub-proxy when a record
+    is emitted in that child's context. Records emitted outside a child
+    context may have an empty ID. See :ref:`deltaproxy-child-log-files` to
+    write attributed records to individual child files.
+
 .. conf_log:: log_granular_levels
 
 ``log_granular_levels``

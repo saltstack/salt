@@ -2,6 +2,7 @@
 
 import time
 from contextlib import ExitStack
+from pathlib import Path
 from textwrap import dedent
 
 import pytest
@@ -21,8 +22,9 @@ pytestmark = [
 
 @pytest.mark.parametrize("multiprocessing", [False, True])
 @pytest.mark.parametrize("parallel_startup", [False, True])
+@pytest.mark.parametrize("split_logs", [False, True], ids=["shared-logs", "split-logs"])
 def test_subproxies_keep_their_own_connections(
-    temp_salt_master, request, tmp_path, multiprocessing, parallel_startup
+    temp_salt_master, request, tmp_path, multiprocessing, parallel_startup, split_logs
 ):
     """Dunders remain device-specific through grains/pillar refresh and reload."""
     if request.config.getoption("--transport") == "tcp":
@@ -31,6 +33,11 @@ def test_subproxies_keep_their_own_connections(
     salt_master = temp_salt_master
     control_id = random_string("connection-control-")
     hosts = {f"{control_id}-{n}": f"10.0.0.1{n}" for n in (1, 2, 3)}
+    child_logs = (
+        {minion_id: tmp_path / f"{minion_id}.log" for minion_id in list(hosts)[:2]}
+        if split_logs
+        else {}
+    )
     grain_revisions = dict.fromkeys(hosts, 1)
     pillar_revisions = dict.fromkeys(hosts, 1)
     revision_files = {}
@@ -40,13 +47,17 @@ def test_subproxies_keep_their_own_connections(
         revision_files[minion_id] = str(revision_file)
     top = {"base": {minion_id: [minion_id] for minion_id in (control_id, *hosts)}}
     proxy_module = """
+    import logging
+
     __proxyenabled__ = ["connection_test"]
     DETAILS = {}
+    log = logging.getLogger(__name__)
 
     def __virtual__():
         return True
 
     def init(opts):
+        log.warning("Isolation driver init for %s", opts["id"])
         DETAILS["host"] = opts["proxy"]["host"]
         __context__["connection_test"] = {
             "host": opts["proxy"]["host"],
@@ -64,6 +75,13 @@ def test_subproxies_keep_their_own_connections(
 
     def context_host():
         return __context__["connection_test"]["host"]
+
+    def probe(fail=False):
+        child_id = __opts__["id"]
+        log.warning("Isolation driver probe for %s", child_id)
+        if fail:
+            raise RuntimeError(f"Isolation driver probe failed for {child_id}")
+        return child_id
 
     def grains():
         with open(__context__["connection_test"]["revision_file"], encoding="utf-8") as stream:
@@ -89,6 +107,9 @@ def test_subproxies_keep_their_own_connections(
     def __virtual__():
         DETAILS["id"] = __opts__["id"]
         return True
+
+    def probe(fail=False):
+        return __proxy__["connection_test.probe"](fail=fail)
 
     def connection():
         return {
@@ -141,6 +162,8 @@ def test_subproxies_keep_their_own_connections(
                 for minion_id, host in hosts.items()
             },
         }
+        for minion_id, path in child_logs.items():
+            pillars[minion_id]["proxy"]["log_file"] = str(path)
         for minion_id, pillar in pillars.items():
             stack.enter_context(
                 salt_master.pillar_tree.base.temp_file(
@@ -158,6 +181,9 @@ def test_subproxies_keep_their_own_connections(
                 "multiprocessing": multiprocessing,
                 "enable_fqdns_grains": False,
                 "proxy_keep_alive": False,
+                "log_file": str(tmp_path / "delta-proxy.log"),
+                "log_level_logfile": "warning",
+                "log_fmt_logfile": "%(minion_id)s %(message)s",
                 "fips_mode": FIPS_TESTRUN,
                 "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
                 "signing_algorithm": (
@@ -207,6 +233,50 @@ def test_subproxies_keep_their_own_connections(
                     time.sleep(0.25)
 
             assert_dunders("startup")
+
+            ret = salt_cli.run(
+                "-L", "connection_test.probe", minion_tgt=",".join(hosts)
+            )
+            assert ret.returncode == 0, ret
+            assert ret.data == {minion_id: minion_id for minion_id in hosts}, ret
+
+            for minion_id in hosts:
+                ret = salt_cli.run(
+                    "connection_test.probe", fail=True, minion_tgt=minion_id
+                )
+                assert ret.returncode != 0, ret
+                assert f"Isolation driver probe failed for {minion_id}" in ret.data
+
+            controller_log = Path(factory.config["log_file"])
+            log_contents = {
+                path: path.read_text(encoding="utf-8")
+                for path in [controller_log, *child_logs.values()]
+            }
+            for minion_id in hosts:
+                destination = child_logs.get(minion_id, controller_log)
+                log_text = log_contents[destination]
+                assert (
+                    f"[{minion_id}] Isolation driver init for {minion_id}" in log_text
+                )
+                assert (
+                    f"[{minion_id}] Isolation driver probe for {minion_id}" in log_text
+                )
+                traceback_header = (
+                    f"[{minion_id}] The minion function caused an exception\n"
+                    "Traceback (most recent call last):\n"
+                )
+                _, header, traceback_text = log_text.partition(traceback_header)
+                assert header, log_text
+                assert traceback_text.partition("\nRuntimeError: ")[2].startswith(
+                    f"Isolation driver probe failed for {minion_id}\n"
+                ), traceback_text
+                for path, other_text in log_contents.items():
+                    if path != destination:
+                        assert f"[{minion_id}]" not in other_text, path
+                        assert (
+                            f"Isolation driver probe failed for {minion_id}"
+                            not in other_text
+                        ), path
 
             # Refresh only one device at a time: sibling values must stay put.
             for minion_id in hosts:

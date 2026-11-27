@@ -462,6 +462,7 @@ def test_subproxy_tune_in_starts_periodics_on_the_running_loop():
     class _FakeSubProxy:
         def __init__(self):
             self.io_loop = MagicMock()
+            self.opts = {"id": "child", "subproxy": True}
 
         def setup_scheduler(self):
             calls.append("scheduler")

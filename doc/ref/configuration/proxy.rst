@@ -30,6 +30,31 @@ minion to manage multiple proxy minions.
 Proxy-specific Configuration Options
 ====================================
 
+.. _deltaproxy-child-log-files:
+
+DeltaProxy child log files
+--------------------------
+
+To give a DeltaProxy child its own file, set ``log_file`` inside that child's
+``proxy`` pillar, alongside ``proxytype``. For example, in the pillar assigned
+to ``switch-01``:
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: napalm
+      log_file: /var/log/salt/switch-01.log
+
+Use a distinct absolute path on the controller host for each child. Once the
+controller loads the child's pillar at startup, attributed records, including
+complete tracebacks, go to that file. Controller messages and records for
+children without this option continue to use the controller's top-level
+``log_file``. Child files use the controller's logfile level and format and
+support external rotation. If a child file cannot be opened, its records fall
+back to the controller log. Restart the controller after changing a
+destination.
+
+
 .. conf_proxy:: add_proxymodule_to_opts
 
 ``add_proxymodule_to_opts``

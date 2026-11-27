@@ -5226,9 +5226,14 @@ class Minion(MinionBase):
             if proxy_target not in self.deltaproxy_objs:
                 return
             _minion = self.deltaproxy_objs[proxy_target]
+            with salt.utils.ctx.subproxy_log_context(
+                _minion.opts, child_id=proxy_target, data=data
+            ):
+                await self._handle_minion_event(_minion, tag, data)
         else:
-            _minion = self
+            await self._handle_minion_event(self, tag, data)
 
+    async def _handle_minion_event(self, _minion, tag, data):
         log.debug("Minion of '%s' is handling event tag '%s'", self.opts["master"], tag)
         if tag.startswith("module_refresh"):
             _minion.module_refresh(
