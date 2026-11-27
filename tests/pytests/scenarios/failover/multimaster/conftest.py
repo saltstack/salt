@@ -6,6 +6,7 @@ import time
 
 import pytest
 from pytestshellutils.exceptions import FactoryNotStarted, FactoryTimeout
+from pytestshellutils.utils.ports import get_unused_localhost_port
 
 import salt.utils.platform
 from tests.conftest import FIPS_TESTRUN
@@ -109,12 +110,10 @@ def _salt_mm_failover_master_2(salt_factories, _salt_mm_failover_master_1):
         ),
     }
 
-    # Use the same ports for both masters, they are binding to different interfaces
-    for key in (
-        "ret_port",
-        "publish_port",
-    ):
-        config_overrides[key] = _salt_mm_failover_master_1.config[key]
+    # Keep the request port shared across interfaces and exercise a change
+    # in the master-advertised publish port during failover.
+    config_overrides["ret_port"] = _salt_mm_failover_master_1.config["ret_port"]
+    config_overrides["publish_port"] = get_unused_localhost_port()
     factory = salt_factories.salt_master_daemon(
         "mm-failover-master-2",
         defaults=config_defaults,
@@ -177,7 +176,6 @@ def _salt_mm_failover_minion_1(_salt_mm_failover_master_1, _salt_mm_failover_mas
             f"{mm_master_1_addr}:{mm_master_1_port}",
             f"{mm_master_2_addr}:{mm_master_2_port}",
         ],
-        "publish_port": _salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
         "master_alive_interval": 5,
         "master_tries": -1,
@@ -245,7 +243,6 @@ def _salt_mm_failover_minion_2(_salt_mm_failover_master_1, _salt_mm_failover_mas
             f"{mm_master_2_addr}:{mm_master_2_port}",
             f"{mm_master_1_addr}:{mm_master_1_port}",
         ],
-        "publish_port": _salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
         "master_alive_interval": 5,
         "master_tries": -1,
