@@ -751,19 +751,31 @@ class Topology:
             # Subprocess wall-clock exceeded.  Log once per call so
             # wait_initial_auth's periodic progress line shows the real
             # failure mode (timeout vs rc!=0 vs empty-json) instead of a
-            # silent {} that reads as "no minions responded".
-            partial_out = (exc.output or b"")[:200].decode("utf-8", errors="replace")
-            partial_err = (exc.stderr or b"")[:200].decode("utf-8", errors="replace")
+            # silent {} that reads as "no minions responded".  Salvage
+            # whatever stdout the CLI buffered before the kill: on
+            # cluster3 the ``--out=json`` stream is incremental and
+            # often contains several ``{"minion-N": true}`` objects
+            # already -- discarding that salvage is what left
+            # ``assert_reconnect`` sweeps empty-handed on CI
+            # 45869625842 where the non-cluster3 partial outputs across
+            # 3 masters DID union-cover every minion that was alive.
+            # See agents/reports/cluster3-post-ping-fix-recovery.md.
+            # ``exc.output`` / ``exc.stderr`` are always ``bytes`` on
+            # ``TimeoutExpired`` even when ``text=True`` was passed to
+            # ``subprocess.run`` (a quirk of ``Popen.communicate``'s
+            # timeout branch), so decode explicitly before any slicing.
+            raw_out = (exc.output or b"").decode("utf-8", errors="replace")
+            raw_err = (exc.stderr or b"").decode("utf-8", errors="replace")
             log.warning(
                 "salt_ping_all[%s]: subprocess timed out after %ss "
                 "(cold-import on registry topology?) partial_stdout=%r "
                 "partial_stderr=%r",
                 master,
                 subprocess_timeout,
-                partial_out,
-                partial_err,
+                raw_out[:200],
+                raw_err[:200],
             )
-            return {}
+            return self._parse_ping_stdout(raw_out.strip())
         stdout = proc.stdout.strip()
         if not stdout:
             # Non-timeout empty output: usually rc!=0 from salt itself
@@ -777,18 +789,55 @@ class Topology:
             )
             return {}
 
+        return self._parse_ping_stdout(stdout)
+
+    @staticmethod
+    def _parse_ping_stdout(stdout: str) -> dict[str, bool]:
+        """Parse ``salt --out=json ... test.ping`` stdout to ``{id: bool}``.
+
+        Salt emits test.ping output in one of TWO shapes:
+
+        * Single wrapping dict (older CLI, single-master synchronous)::
+
+              {"minion-1": true, "minion-2": true}
+
+        * Streaming: one JSON object per minion, concatenated, with
+          per-minion returns flushed as they arrive (cluster3 /
+          multi-master with staggered return channels)::
+
+              {"minion-1": true}
+              {"minion-2": true}
+
+        Error responses for unreachable minions come back as string
+        values -- ``{"minion-1": "Minion did not return. [No response]..."}``
+        -- which ``bool(v)`` would silently coerce to ``True`` and
+        misreport a stuck minion as reachable.  Only ``v is True``
+        counts as a successful test.ping response.
+
+        Partial / truncated streams (from subprocess timeout salvage)
+        may end mid-object; the raw_decode loop stops at the first
+        parse error and returns what was decoded so far.  Callers that
+        pass a potentially-truncated buffer still get every minion
+        that returned before the truncation point.
+        """
+        if not stdout:
+            return {}
+
+        out: dict[str, bool] = {}
+
         # Fast path: output is a single wrapping dict.
         try:
             data = json.loads(stdout)
             if isinstance(data, dict):
-                return {str(k): bool(v) for k, v in data.items()}
+                for k, v in data.items():
+                    out[str(k)] = v is True
+                return out
         except json.JSONDecodeError:
-            pass
+            out = {}
 
         # Streaming path: one JSON object per minion, concatenated.
         decoder = json.JSONDecoder()
         idx = 0
-        out: dict[str, bool] = {}
         while idx < len(stdout):
             # Skip whitespace between objects.
             while idx < len(stdout) and stdout[idx].isspace():
@@ -803,7 +852,15 @@ class Topology:
             idx = end
             if isinstance(obj, dict):
                 for k, v in obj.items():
-                    out[str(k)] = bool(v)
+                    # Only treat literal ``True`` as a successful ping
+                    # response.  A string value is salt's own error
+                    # text ("Minion did not return. [No response]...")
+                    # which ``bool(v)`` would misclassify as reachable
+                    # -- the regression that let cluster3-fast report
+                    # every scale-minion as alive while scale-minion-1
+                    # was buried under a 455k queue backlog and never
+                    # answered.
+                    out[str(k)] = v is True
         return out
 
     # ------------------------------------------------------------------
