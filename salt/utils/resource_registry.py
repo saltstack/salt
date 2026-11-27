@@ -501,6 +501,15 @@ class _ResourceIndexStore:
         self._ensure_derived_fresh()
         return list(self._by_type.get(resource_type, ()))
 
+    def match_resource_ids(self, predicate):
+        """Return distinct bare resource IDs selected by a predicate."""
+        self._ensure_derived_fresh()
+        return list(
+            dict.fromkeys(
+                rid for ids in self._by_type.values() for rid in ids if predicate(rid)
+            )
+        )
+
     def resource_types(self):
         """
         Resource type names present in the derived primary view.
@@ -903,7 +912,7 @@ class ResourceRegistry:
         out = []
         try:
             for rtype in self._store.resource_types():
-                if resource_id in self._store.rids_by_type(rtype):
+                if self.has_srn(rtype, resource_id):
                     out.append((rtype, resource_id))
         except Exception as exc:  # pylint: disable=broad-except
             log.warning(
@@ -912,6 +921,14 @@ class ResourceRegistry:
                 exc,
             )
         return out
+
+    def resource_types(self):
+        """Return the types registered by managing minions."""
+        return self._store.resource_types()
+
+    def match_resource_ids(self, predicate):
+        """Return the registered bare resource IDs selected by a predicate."""
+        return self._store.match_resource_ids(predicate)
 
     def get_resource_ids_by_type(self, resource_type):
         """
@@ -1334,6 +1351,15 @@ class _NullResourceRegistry:
         return False
 
     def resolve_bare_resource_id(self, resource_id):
+        return []
+
+    def resource_types(self):
+        return ()
+
+    def match_resource_ids(self, predicate):
+        return []
+
+    def get_managing_minions_for_srn(self, resource_type, resource_id):
         return []
 
     def get_resource_ids_by_type(self, resource_type):

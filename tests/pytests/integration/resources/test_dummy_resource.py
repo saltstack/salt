@@ -29,7 +29,10 @@ import time
 
 import pytest
 
-from tests.pytests.integration.resources.conftest import DUMMY_RESOURCES
+from tests.pytests.integration.resources.conftest import (
+    DUMMY_RESOURCES,
+    DUMMY_RESOURCES_2,
+)
 
 pytestmark = [pytest.mark.slow_test]
 
@@ -142,17 +145,25 @@ def test_T_at_full_srn_returns_only_that_resource(salt_minion, salt_cli):
         ("compound_full_srn", ("-C", "test.ping"), "T@dummy:__ID__"),
         ("list_bare_resource_id", ("-L", "test.ping"), "__ID__"),
         ("glob_exact_resource_id", ("test.ping",), "__ID__"),
+        ("glob_resource_id", ("test.ping",), "dummy-*__SUFFIX__"),
+        ("pcre_resource_id", ("-E", "test.ping"), "^__ID__$"),
+        ("grain_resource_id", ("-G", "test.ping"), "resource_id:__ID__"),
+        ("grain_resource_prefix", ("-G", "test.ping"), "resource_id:__ID__*"),
+        ("compound_glob", ("-C", "test.ping"), "T@dummy and dummy-*__SUFFIX__"),
+        ("compound_regex", ("-C", "test.ping"), "T@dummy and E@^__ID__$"),
+        ("compound_list", ("-C", "test.ping"), "T@dummy and L@__ID__"),
     ],
 )
 def test_single_resource_targeting_forms_among_three(
     salt_minion, salt_cli, case_label, cli_args, minion_tgt_tmpl
 ):
     """
-    With three dummy resources, ``test.ping`` addressed to **one** resource must
-    return only that id using compound ``T@``, list ``-L``, or exact glob.
+    Each target expression selects exactly one of three resources.
     """
     target_id = DUMMY_RESOURCES[1]
-    tgt = minion_tgt_tmpl.replace("__ID__", target_id)
+    tgt = minion_tgt_tmpl.replace("__ID__", target_id).replace(
+        "__SUFFIX__", target_id[-1]
+    )
 
     ret = salt_cli.run(*cli_args, minion_tgt=tgt)
     assert ret.returncode == 0, (case_label, ret)
@@ -534,22 +545,21 @@ def test_state_single_against_bare_type_returns_per_resource(salt_minion, salt_c
         assert "not supported for resource type 'dummy'" in body, (rid, body)
 
 
-def test_state_single_against_bare_resource_id_keyed_by_resource_id(
-    salt_minion, salt_cli
+@pytest.mark.parametrize(
+    "option,target",
+    [
+        ([], "{id}"),
+        ([], "dummy-*{suffix}"),
+        (["-L"], "{id}"),
+        (["-E"], "^{id}$"),
+        (["-C"], "T@dummy and E@^{id}$"),
+    ],
+)
+def test_state_single_against_resource_keyed_by_resource_id(
+    salt_minion, salt_cli, option, target
 ):
     """
-    Regression: ``salt '<id>' state.single test.nop ...`` (bare
-    resource id, ``tgt_type=glob``, no wildcards) must return under
-    the resource id — same shape as ``salt '<id>' test.ping``.
-
-    The minion-side bug this test guards against: for a bare-id glob
-    target, ``_is_pure_resource_target`` used to only recognise
-    compound ``T@`` / ``M@`` expressions as pure-resource, so a bare-id
-    glob for a merge-mode function produced no return — only the
-    master's "did not return" timeout.  The fix in ``salt/minion.py``
-    recognises an exact (no-wildcard) glob whose ``tgt`` names a
-    managed resource as a pure-resource target so the resource
-    dispatch fires.
+    A state job addressed to one resource returns under its resource ID.
 
     Post-#69881: ``state.single`` is rejected at the per-resource
     loader (dummy ships no ``state.py`` override).  The bare-id
@@ -559,10 +569,11 @@ def test_state_single_against_bare_resource_id_keyed_by_resource_id(
     """
     target_id = DUMMY_RESOURCES[0]
     ret = salt_cli.run(
+        *option,
         "state.single",
         "test.nop",
-        "name=bare-id-keyed-state-return",
-        minion_tgt=target_id,
+        "name=per-resource-state-return",
+        minion_tgt=target.format(id=target_id, suffix=target_id[-1]),
     )
     # Rejection returns non-zero.
     assert ret.returncode != 0, ret
@@ -594,3 +605,30 @@ def test_state_single_against_bare_resource_id_keyed_by_resource_id(
         f"Phantom 'Minion did not return' in output: "
         f"stdout={ret.stdout!r} stderr={ret.stderr!r}"
     )
+
+
+def test_compound_resources_by_owner_and_exclusion(
+    salt_minion, salt_minion_2, salt_cli
+):
+    target_id, sibling_id, _ = DUMMY_RESOURCES
+    other_id = DUMMY_RESOURCES_2[0]
+    for target, expected in (
+        (f"M@{salt_minion.id}", {salt_minion.id: True}),
+        (f"M@{salt_minion.id} and T@dummy", dict.fromkeys(DUMMY_RESOURCES, True)),
+        (
+            f"T@dummy and not M@{salt_minion.id}",
+            dict.fromkeys(DUMMY_RESOURCES_2, True),
+        ),
+        (
+            f"M@{salt_minion.id} and L@{target_id},{sibling_id},{other_id} "
+            f"and not E@^{sibling_id}$",
+            {target_id: True},
+        ),
+        (
+            f"T@dummy:{target_id} or {salt_minion_2.id}",
+            {target_id: True, salt_minion_2.id: True},
+        ),
+    ):
+        ret = salt_cli.run("--static", "-C", "test.ping", minion_tgt=target)
+        assert ret.returncode == 0, ret
+        assert _salt_cli_json_dict(ret) == expected

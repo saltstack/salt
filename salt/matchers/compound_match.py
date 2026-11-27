@@ -25,7 +25,7 @@ def _load_matchers(opts):
     __context__["matchers"] = salt.loader.matchers(opts)
 
 
-def match(tgt, opts=None, minion_id=None):
+def match(tgt, opts=None, minion_id=None, match_resources=True):
     """
     Runs the compound target check
     """
@@ -105,6 +105,10 @@ def match(tgt, opts=None, minion_id=None):
                     word,
                 )
                 return False
+
+            if engine == "resource" and not match_resources:
+                results.append("False")
+                continue
 
             engine_args = [target_info["pattern"]]
             engine_kwargs = {"opts": opts, "minion_id": minion_id}

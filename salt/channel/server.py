@@ -1825,23 +1825,19 @@ class PubServerChannel:
 
         int_payload = {"payload": salt.payload.dumps(payload)}
 
-        # If topics are upported, target matching has to happen master side
+        # If topics are supported, target matching has to happen master side
         match_targets = ["pcre", "glob", "list"]
         if self.transport.topic_support() and load["tgt_type"] in match_targets:
-            # add some targeting stuff for lists only (for now)
-            if load["tgt_type"] == "list":
-                int_payload["topic_lst"] = load["tgt"]
-            if isinstance(load["tgt"], str):
-                # Fetch a list of minions that match
-                _res = self.ckminions.check_minions(
-                    load["tgt"], tgt_type=load["tgt_type"]
-                )
-                match_ids = _res["minions"]
-                log.debug("Publish Side Match: %s", match_ids)
-                # Send list of miions thru so zmq can target them
-                int_payload["topic_lst"] = match_ids
-            else:
-                int_payload["topic_lst"] = load["tgt"]
+            topics = load["tgt"]
+            if isinstance(topics, str):
+                topics = self.ckminions.check_minions(
+                    topics, tgt_type=load["tgt_type"]
+                )["minions"]
+            # The encrypted target remains the original expression. Only the
+            # transport topics gain the managers that can dispatch it locally.
+            topics = self.ckminions.get_publish_topics(topics)
+            log.debug("Publish Side Match: %s", topics)
+            int_payload["topic_lst"] = topics
 
         return int_payload
 

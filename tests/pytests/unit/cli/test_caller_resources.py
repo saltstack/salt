@@ -17,7 +17,7 @@ Coverage:
 * ``-r`` with a bare-id glob → exactly that resource (bare value).
 * ``-r`` with a list target → only the listed resources (dict).
 * ``-r`` with a pure ``T@`` compound → only the matched resources, the
-  managing minion is excluded (``_is_pure_resource_target`` short-circuit).
+  managing minion is excluded.
 * ``-r`` for ``state.apply`` → master-style merge: one combined dict with
   state IDs prefixed by the resource id.
 """

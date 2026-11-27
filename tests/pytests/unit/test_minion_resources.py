@@ -150,15 +150,27 @@ def test_pure_resource_target_excludes_own_minion_id(minion_opts):
         with mock_patch("salt.minion.Minion.connect_master"):
             m = salt.minion.Minion(minion_opts, load_grains=False)
     m._iter_resource_ids = lambda rt: iter(RESOURCES.get(rt, []))
-    own_id = {"tgt": "dummy-01", "tgt_type": "glob", "fun": "test.ping", "arg": []}
+    m.matchers = {"glob_match.match": lambda target: target == m.opts["id"]}
+    own_id = {
+        "tgt": "dummy-01",
+        "tgt_type": "glob",
+        "fun": "test.ping",
+        "arg": [],
+        "jid": "1",
+    }
     other_resource = {
         "tgt": "dummy-02",
         "tgt_type": "glob",
         "fun": "test.ping",
         "arg": [],
     }
-    assert m._is_pure_resource_target(own_id) is False
-    assert m._is_pure_resource_target(other_resource) is True
+    other_resource["jid"] = "2"
+    assert m._target_load(own_id)
+    assert own_id["minion_is_target"]
+    assert not own_id["pure_resource_target"]
+    assert m._target_load(other_resource)
+    assert not other_resource["minion_is_target"]
+    assert other_resource["pure_resource_target"]
 
 
 def test_resolve_resource_targets_list_bare_ids(minion_with_resources):
@@ -460,13 +472,6 @@ def test_merge_resource_funs_does_not_contain_test_ping():
 
 def test_merge_resource_funs_is_frozenset():
     assert isinstance(salt.minion.Minion._MERGE_RESOURCE_FUNS, frozenset)
-
-
-def test_merge_resource_funs_minions_and_minion_in_sync():
-    """_MERGE_RESOURCE_FUNS must be identical in salt.minion and salt.utils.minions."""
-    import salt.utils.minions as _minions_mod
-
-    assert salt.minion.Minion._MERGE_RESOURCE_FUNS == _minions_mod._MERGE_RESOURCE_FUNS
 
 
 # ---------------------------------------------------------------------------

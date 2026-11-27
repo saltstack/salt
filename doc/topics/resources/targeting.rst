@@ -10,8 +10,7 @@ Targeting Salt Resources
 A *Salt resource* is something a minion manages on behalf of the master —
 an SSH host, a virtual appliance, an external API endpoint — addressed
 by an id of the operator's choosing. Resources extend Salt's targeting
-system: every targeting expression that selects minions can also select
-resources.
+system with selectors for resource IDs, types, grains, and managing minions.
 
 This page is the targeting reference. For the conceptual introduction
 see :ref:`resources`; for the registry and dispatch plumbing see
@@ -21,15 +20,17 @@ see :ref:`resources`; for the registry and dispatch plumbing see
 Targeting forms
 ===============
 
-Every form below treats resources alongside minions: a single command
-returns one entry per matched id, whether that id belongs to a minion
-or a resource.
+A command returns one entry per matched minion or resource ID.
 
 Glob and exact-id
 -----------------
 
-A wildcard glob automatically expands to include every resource managed
-by every matched minion::
+A wildcard glob matches resource IDs directly::
+
+    salt 'web-*' test.ping
+
+A top-level wildcard glob also includes every resource managed by a
+matching minion::
 
     salt '*' test.ping
 
@@ -37,9 +38,13 @@ A specific bare id matches a resource directly::
 
     salt 'web-01' test.ping
 
-A specific minion id targets only the minion (not its resources)::
+A specific minion ID targets the minion itself::
 
     salt 'minion-1' test.ping
+
+Regular expressions use ``-E`` directly or ``E@`` in a compound target::
+
+    salt -E '^web-0[12]$' test.ping
 
 
 Compound ``T@`` (resource type)
@@ -54,6 +59,16 @@ Compound ``T@`` (resource type)
     salt -C 'T@ssh:web-01' test.ping
 
 
+Managing minion ``M@``
+-----------------------
+
+In a compound target, combine ``M@<minion-id>`` with a resource selector
+to match resources managed by that minion::
+
+    salt -C 'M@minion-1 and T@ssh' test.ping
+
+By itself, ``M@minion-1`` matches the managing minion.
+
 Grain-based ``-G`` / ``G@``
 ---------------------------
 
@@ -61,8 +76,9 @@ A resource carries its own grains, produced by the ``grains`` function
 in the resource's connection module (e.g.
 :func:`salt.resource.dummy.grains`). The master records each minion's
 per-resource grain dicts in the ``resource_grains`` cache bank when the
-minion registers, and ``salt -G`` matches against that bank in addition
-to the per-minion grain bank::
+minion registers. The master learns the resource types from these
+registrations. ``salt -G`` matches against both the resource and minion
+grain caches::
 
     salt -G 'environment:prod' test.ping
 
@@ -86,12 +102,13 @@ Identical semantics to ``-G`` / ``G@`` but values are regex patterns::
     salt -C 'P@environment:^production-.*' state.apply
 
 
-List ``-L``
------------
+List ``-L`` / ``L@``
+--------------------
 
 A bare resource id appearing in a list expression matches::
 
     salt -L 'web-01,web-02,db-01' test.ping
+    salt -C 'T@ssh and L@web-01,web-02,db-01' test.ping
 
 
 Pillar ``-I`` / ``I@``
@@ -116,7 +133,9 @@ The master's ``CkMinions`` augments grain matches with resource ids
 read from the ``resource_grains`` cache bank. The augment runs for
 ``-G``, ``-P``, and any ``G@`` / ``P@`` term inside a compound. The
 matched bare resource ids are added to the response wait set so the
-master accepts the corresponding returns.
+master accepts the corresponding returns. For transports that use publish topics,
+the master also routes glob, list, and regex jobs to the matched resources'
+managing minions. The original target expression determines what runs.
 
 Minion side
 -----------
