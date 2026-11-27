@@ -56,10 +56,28 @@ def _extract_rpm_pre_minion_block(spec_text):
     """
     Extract the shell body of ``%pre minion``. The block ends at the next
     ``%pre`` directive (``%pre cloud``).
+
+    The spec uses ``%if %{with native}`` conditionals and a few rpm
+    macros to differentiate the native-flavor and onedir-flavor builds.
+    The onedir flavor is what this unit test exercises, so drop any
+    ``%if %{with native}`` ... ``%endif`` blocks (native-only content)
+    and any bare ``%{...}`` macro tokens that would otherwise reach
+    the shell as literal text and crash.
     """
     m = re.search(r"%pre minion\s*\n(.*?)\n%pre cloud", spec_text, re.DOTALL)
     assert m, "could not locate %pre minion in spec"
-    return m.group(1)
+    body = m.group(1)
+    # Drop native-only `%if %{with native}` ... `%endif` blocks (onedir
+    # rendering of the spec omits them).
+    body = re.sub(
+        r"^%if %\{with native\}\n.*?\n%endif\n",
+        "",
+        body,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+    # Drop bare `%{_name}` macro tokens (expand to empty on onedir).
+    body = re.sub(r"^%\{[A-Za-z_][A-Za-z_0-9]*\}\s*\n", "", body, flags=re.MULTILINE)
+    return body
 
 
 SANDBOX_PROLOGUE = textwrap.dedent(

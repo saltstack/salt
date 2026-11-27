@@ -1,0 +1,1239 @@
+{
+  "image": "amazonlinux:2023",
+  "image_digest": "sha256:ce6e17ec13c73a223561dd86e4fb880137bdc58e511df403e87d4b1069f4cd12",
+  "lock_file": "requirements/static/pkg/py3.9/linux.lock",
+  "packages": {
+    "aiohappyeyeballs": {
+      "import_names": [
+        "aiohappyeyeballs"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "2.6.1",
+      "native_pkg": "python3-aiohappyeyeballs",
+      "native_version": null,
+      "status": "missing"
+    },
+    "aiohttp": {
+      "import_names": [
+        "aiohttp"
+      ],
+      "import_sites": [
+        "salt/transport/ws.py:8",
+        "salt/transport/ws.py:9"
+      ],
+      "import_tier": "feature-opt-in",
+      "lock_version": "3.13.5",
+      "native_pkg": "python3-aiohttp",
+      "native_version": null,
+      "note": "needed for websocket transport",
+      "owning_features": [
+        "ws transport"
+      ],
+      "status": "missing"
+    },
+    "aiosignal": {
+      "import_names": [
+        "aiosignal"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "1.4.0",
+      "native_pkg": "python3-aiosignal",
+      "native_version": null,
+      "note": "needed for websocket transport",
+      "status": "missing"
+    },
+    "annotated-doc": {
+      "import_names": [
+        "annotated_doc"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "0.0.4",
+      "native_pkg": "python3-annotated-doc",
+      "native_version": null,
+      "status": "missing"
+    },
+    "apache-libcloud": {
+      "import_names": [
+        "libcloud"
+      ],
+      "import_sites": [
+        "salt/cloud/libcloudfuncs.py:18",
+        "salt/cloud/libcloudfuncs.py:19",
+        "salt/cloud/libcloudfuncs.py:20",
+        "salt/cloud/libcloudfuncs.py:21"
+      ],
+      "import_tier": "indented",
+      "lock_version": "3.8.0",
+      "native_pkg": "python3-apache-libcloud",
+      "native_version": null,
+      "status": "missing"
+    },
+    "async-timeout": {
+      "import_names": [
+        "async_timeout"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "4.0.3",
+      "native_pkg": "python3-async-timeout",
+      "native_version": null,
+      "note": "needed for websocket transport",
+      "status": "missing"
+    },
+    "attrs": {
+      "import_names": [
+        "attrs"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "23.2.0",
+      "native_pkg": "python3-attrs",
+      "native_version": "20.3.0",
+      "status": "present"
+    },
+    "backports-tarfile": {
+      "import_names": [
+        "backports_tarfile"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "1.2.0",
+      "native_pkg": "python3-backports-tarfile",
+      "native_version": null,
+      "status": "missing"
+    },
+    "certifi": {
+      "import_names": [
+        "certifi"
+      ],
+      "import_sites": [
+        "salt/utils/http.py:75",
+        "salt/utils/thin.py:66"
+      ],
+      "import_tier": "indented",
+      "lock_version": "2026.6.17",
+      "native_pkg": "python3-certifi",
+      "native_version": "2022.12.07",
+      "status": "present"
+    },
+    "cffi": {
+      "import_names": [
+        "cffi"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "2.0.0",
+      "native_pkg": "python3-cffi",
+      "native_version": "1.14.5",
+      "status": "present"
+    },
+    "charset-normalizer": {
+      "import_names": [
+        "charset_normalizer"
+      ],
+      "import_sites": [
+        "salt/utils/thin.py:33"
+      ],
+      "import_tier": "indented",
+      "lock_version": "3.2.0",
+      "native_pkg": "python3-charset-normalizer",
+      "native_version": null,
+      "note": "requests>=2.26.0 dependency",
+      "status": "missing"
+    },
+    "cheroot": {
+      "import_names": [
+        "cheroot"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "11.1.2",
+      "native_pkg": "python3-cheroot",
+      "native_version": null,
+      "note": "cherrypy",
+      "status": "missing"
+    },
+    "cherrypy": {
+      "import_names": [
+        "cherrypy"
+      ],
+      "import_sites": [
+        "salt/netapi/rest_cherrypy/app.py:599",
+        "salt/netapi/rest_cherrypy/tools/websockets.py:2",
+        "salt/netapi/rest_cherrypy/wsgi.py:49",
+        "salt/netapi/rest_cherrypy/__init__.py:18",
+        "salt/netapi/rest_cherrypy/app.py:616"
+      ],
+      "import_tier": "feature-opt-in",
+      "lock_version": "18.10.0",
+      "native_pkg": "python3-cherrypy",
+      "native_version": null,
+      "note": "salt-api degraded",
+      "owning_features": [
+        "cherrypy netapi backend"
+      ],
+      "status": "missing"
+    },
+    "click": {
+      "import_names": [
+        "click"
+      ],
+      "import_sites": [
+        "salt/utils/extend.py:32"
+      ],
+      "import_tier": "indented",
+      "lock_version": "8.1.8",
+      "native_pkg": "python3-click",
+      "native_version": "7.1.2",
+      "status": "present"
+    },
+    "croniter": {
+      "import_names": [
+        "croniter"
+      ],
+      "import_sites": [
+        "salt/utils/schedule.py:60"
+      ],
+      "import_tier": "indented",
+      "lock_version": "6.2.2",
+      "native_pkg": "python3-croniter",
+      "native_version": null,
+      "note": "schedules can not use cron format",
+      "status": "missing"
+    },
+    "cryptography": {
+      "import_names": [
+        "cryptography"
+      ],
+      "import_sites": [
+        "salt/utils/asymmetric.py:6",
+        "salt/utils/asymmetric.py:7",
+        "salt/utils/sshpki.py:6",
+        "salt/utils/sshpki.py:7",
+        "salt/utils/x509.py:12",
+        "salt/utils/x509.py:13",
+        "salt/utils/x509.py:14",
+        "salt/utils/x509.py:15",
+        "salt/utils/x509.py:16",
+        "salt/utils/x509.py:17",
+        "salt/utils/x509.py:18",
+        "salt/beacons/cert_info.py:47",
+        "salt/crypt.py:55",
+        "salt/crypt.py:56",
+        "salt/crypt.py:57",
+        "salt/crypt.py:58",
+        "salt/crypt.py:99",
+        "salt/modules/ssh_pki.py:128",
+        "salt/modules/tls.py:167",
+        "salt/modules/tls.py:168",
+        "salt/modules/tls.py:169",
+        "salt/modules/x509_v2.py:190",
+        "salt/modules/x509_v2.py:191",
+        "salt/states/x509_v2.py:195",
+        "salt/states/x509_v2.py:196",
+        "salt/transport/tls_util.py:15",
+        "salt/transport/tls_util.py:16",
+        "salt/utils/sshpki.py:14",
+        "salt/utils/sshpki.py:28"
+      ],
+      "import_tier": "module-top",
+      "lock_version": "46.0.7",
+      "native_pkg": "python3-cryptography",
+      "native_version": "36.0.1",
+      "status": "present"
+    },
+    "distlib": {
+      "import_names": [
+        "distlib"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "0.4.0",
+      "native_pkg": "python3-distlib",
+      "native_version": "0.3.1",
+      "status": "present"
+    },
+    "distro": {
+      "import_names": [
+        "distro"
+      ],
+      "import_sites": [
+        "salt/utils/platform.py:14",
+        "salt/utils/thin.py:22"
+      ],
+      "import_tier": "module-top",
+      "lock_version": "1.9.0",
+      "native_pkg": "python3-distro",
+      "native_version": "1.5.0",
+      "status": "present"
+    },
+    "filelock": {
+      "import_names": [
+        "filelock"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "3.19.1",
+      "native_pkg": "python3-filelock",
+      "native_version": "3.3.1",
+      "status": "present"
+    },
+    "frozenlist": {
+      "import_names": [
+        "frozenlist"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "1.8.0",
+      "native_pkg": "python3-frozenlist",
+      "native_version": null,
+      "note": "needed for websocket transport",
+      "status": "missing"
+    },
+    "gitdb": {
+      "import_names": [
+        "gitdb"
+      ],
+      "import_sites": [
+        "salt/utils/gitfs.py:112"
+      ],
+      "import_tier": "indented",
+      "lock_version": "4.0.12",
+      "native_pkg": "python3-gitdb",
+      "native_version": null,
+      "status": "missing"
+    },
+    "gitpython": {
+      "import_names": [
+        "git"
+      ],
+      "import_sites": [
+        "salt/utils/gitfs.py:111"
+      ],
+      "import_tier": "indented",
+      "lock_version": "3.2.0",
+      "native_pkg": "python3-gitpython",
+      "native_version": null,
+      "status": "missing"
+    },
+    "googleapis-common-protos": {
+      "import_names": [
+        "google.api",
+        "google.rpc"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "1.75.0",
+      "native_pkg": "python3-googleapis-common-protos",
+      "native_version": null,
+      "status": "missing"
+    },
+    "idna": {
+      "import_names": [
+        "idna"
+      ],
+      "import_sites": [
+        "salt/utils/thin.py:23",
+        "salt/utils/x509.py:27"
+      ],
+      "import_tier": "module-top",
+      "lock_version": "3.18",
+      "native_pkg": "python3-idna",
+      "native_version": "2.10",
+      "status": "present"
+    },
+    "importlib-metadata": {
+      "import_names": [
+        "importlib_metadata"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "8.7.0",
+      "native_pkg": "python3-importlib-metadata",
+      "native_version": null,
+      "note": "used by jaraco.text",
+      "status": "missing"
+    },
+    "jaraco-collections": {
+      "import_names": [
+        "jaraco.collections"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "4.1.0",
+      "native_pkg": "python3-jaraco-collections",
+      "native_version": null,
+      "note": "missing ok",
+      "status": "missing"
+    },
+    "jaraco-context": {
+      "import_names": [
+        "jaraco.context"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "6.1.1",
+      "native_pkg": "python3-jaraco-context",
+      "native_version": null,
+      "note": "missing ok",
+      "status": "missing"
+    },
+    "jaraco-functools": {
+      "import_names": [
+        "jaraco.functools"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "4.4.0",
+      "native_pkg": "python3-jaraco-functools",
+      "native_version": null,
+      "note": "missing ok",
+      "status": "missing"
+    },
+    "jaraco-text": {
+      "import_names": [
+        "jaraco.text"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "4.2.0",
+      "native_pkg": "python3-jaraco-text",
+      "native_version": null,
+      "note": "missing ok",
+      "status": "missing"
+    },
+    "jinja2": {
+      "import_names": [
+        "jinja2"
+      ],
+      "import_sites": [
+        "salt/auth/ldap.py:10",
+        "salt/modules/debian_ip.py:18",
+        "salt/modules/debian_ip.py:19",
+        "salt/modules/rh_ip.py:8",
+        "salt/modules/rh_ip.py:9",
+        "salt/pillar/stack.py:383",
+        "salt/utils/cloud.py:23",
+        "salt/utils/extend.py:23",
+        "salt/utils/jinja.py:20",
+        "salt/utils/jinja.py:21",
+        "salt/utils/jinja.py:22",
+        "salt/utils/jinja.py:23",
+        "salt/utils/jinja.py:24",
+        "salt/utils/saltclass.py:8",
+        "salt/utils/templates.py:17",
+        "salt/utils/templates.py:18",
+        "salt/utils/templates.py:19",
+        "salt/utils/thin.py:24",
+        "salt/utils/jinja.py:40"
+      ],
+      "import_tier": "module-top",
+      "lock_version": "3.1.6",
+      "native_pkg": "python3-jinja2",
+      "native_version": "2.11.3",
+      "status": "present"
+    },
+    "jmespath": {
+      "import_names": [
+        "jmespath"
+      ],
+      "import_sites": [
+        "salt/utils/data.py:25"
+      ],
+      "import_tier": "indented",
+      "lock_version": "1.1.0",
+      "native_pkg": "python3-jmespath",
+      "native_version": "0.10.0",
+      "status": "present"
+    },
+    "looseversion": {
+      "import_names": [
+        "looseversion"
+      ],
+      "import_sites": [
+        "salt/utils/thin.py:25",
+        "salt/utils/versions.py:20"
+      ],
+      "import_tier": "module-top",
+      "lock_version": "1.3.0",
+      "native_pkg": "python3-looseversion",
+      "native_version": null,
+      "note": "used by many modules",
+      "status": "missing"
+    },
+    "markdown-it-py": {
+      "import_names": [
+        "markdown_it"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "2.2.0",
+      "native_pkg": "python3-markdown-it-py",
+      "native_version": null,
+      "status": "missing"
+    },
+    "markupsafe": {
+      "import_names": [
+        "markupsafe"
+      ],
+      "import_sites": [
+        "salt/utils/jinja.py:37",
+        "salt/utils/thin.py:87"
+      ],
+      "import_tier": "indented",
+      "lock_version": "3.0.3",
+      "native_pkg": "python3-markupsafe",
+      "native_version": "1.1.1",
+      "status": "present"
+    },
+    "mdurl": {
+      "import_names": [
+        "mdurl"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "0.1.2",
+      "native_pkg": "python3-mdurl",
+      "native_version": null,
+      "status": "missing"
+    },
+    "more-itertools": {
+      "import_names": [
+        "more_itertools"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "10.8.0",
+      "native_pkg": "python3-more-itertools",
+      "native_version": "8.5.0",
+      "status": "present"
+    },
+    "msgpack": {
+      "import_names": [
+        "msgpack"
+      ],
+      "import_sites": [
+        "salt/cache/mmap_cache.py:39",
+        "salt/utils/thin.py:26",
+        "salt/utils/msgpack.py:11",
+        "salt/utils/versions.py:666"
+      ],
+      "import_tier": "module-top",
+      "lock_version": "1.1.2",
+      "native_pkg": "python3-msgpack",
+      "native_version": null,
+      "note": "absolutely needed",
+      "status": "missing"
+    },
+    "multidict": {
+      "import_names": [
+        "multidict"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "6.7.1",
+      "native_pkg": "python3-multidict",
+      "native_version": null,
+      "note": "needed for websocket transport",
+      "status": "missing"
+    },
+    "opentelemetry-api": {
+      "import_names": [
+        "opentelemetry"
+      ],
+      "import_sites": [
+        "salt/master.py:150",
+        "salt/minion.py:131",
+        "salt/utils/metrics.py:93",
+        "salt/utils/metrics.py:94",
+        "salt/utils/metrics.py:97",
+        "salt/utils/metrics.py:98",
+        "salt/utils/metrics.py:102",
+        "salt/utils/metrics.py:106",
+        "salt/utils/metrics.py:409",
+        "salt/utils/metrics.py:433",
+        "salt/utils/tracing.py:108",
+        "salt/utils/tracing.py:109",
+        "salt/utils/tracing.py:110",
+        "salt/utils/tracing.py:113",
+        "salt/utils/tracing.py:114",
+        "salt/utils/tracing.py:115",
+        "salt/utils/tracing.py:119",
+        "salt/utils/tracing.py:125",
+        "salt/utils/tracing.py:472"
+      ],
+      "import_tier": "indented",
+      "lock_version": "1.41.1",
+      "native_pkg": "python3-opentelemetry-api",
+      "native_version": null,
+      "status": "missing"
+    },
+    "opentelemetry-exporter-otlp-proto-common": {
+      "import_names": [
+        "opentelemetry.exporter.otlp.proto.common"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "1.41.1",
+      "native_pkg": "python3-opentelemetry-exporter-otlp-proto-common",
+      "native_version": null,
+      "status": "missing"
+    },
+    "opentelemetry-exporter-otlp-proto-http": {
+      "import_names": [
+        "opentelemetry.exporter.otlp.proto.http"
+      ],
+      "import_sites": [
+        "salt/utils/metrics.py:94",
+        "salt/utils/tracing.py:110"
+      ],
+      "import_tier": "indented",
+      "lock_version": "1.41.1",
+      "native_pkg": "python3-opentelemetry-exporter-otlp-proto-http",
+      "native_version": null,
+      "status": "missing"
+    },
+    "opentelemetry-exporter-prometheus": {
+      "import_names": [
+        "opentelemetry.exporter.prometheus"
+      ],
+      "import_sites": [
+        "salt/utils/metrics.py:433"
+      ],
+      "import_tier": "indented",
+      "lock_version": "0.62b1",
+      "native_pkg": "python3-opentelemetry-exporter-prometheus",
+      "native_version": null,
+      "status": "missing"
+    },
+    "opentelemetry-proto": {
+      "import_names": [
+        "opentelemetry.proto"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "1.41.1",
+      "native_pkg": "python3-opentelemetry-proto",
+      "native_version": null,
+      "status": "missing"
+    },
+    "opentelemetry-sdk": {
+      "import_names": [
+        "opentelemetry.sdk"
+      ],
+      "import_sites": [
+        "salt/utils/metrics.py:97",
+        "salt/utils/metrics.py:98",
+        "salt/utils/metrics.py:102",
+        "salt/utils/metrics.py:106",
+        "salt/utils/tracing.py:113",
+        "salt/utils/tracing.py:114",
+        "salt/utils/tracing.py:115",
+        "salt/utils/tracing.py:119"
+      ],
+      "import_tier": "indented",
+      "lock_version": "1.41.1",
+      "native_pkg": "python3-opentelemetry-sdk",
+      "native_version": null,
+      "status": "missing"
+    },
+    "opentelemetry-semantic-conventions": {
+      "import_names": [
+        "opentelemetry.semconv"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "0.62b1",
+      "native_pkg": "python3-opentelemetry-semantic-conventions",
+      "native_version": null,
+      "status": "missing"
+    },
+    "packaging": {
+      "import_names": [
+        "packaging"
+      ],
+      "import_sites": [
+        "salt/utils/thin.py:27",
+        "salt/utils/versions.py:21",
+        "salt/states/pip_state.py:178",
+        "salt/states/pip_state.py:179"
+      ],
+      "import_tier": "module-top",
+      "lock_version": "26.2",
+      "native_pkg": "python3-packaging",
+      "native_version": "21.3",
+      "status": "present"
+    },
+    "platformdirs": {
+      "import_names": [
+        "platformdirs"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "4.4.0",
+      "native_pkg": "python3-platformdirs",
+      "native_version": null,
+      "status": "missing"
+    },
+    "portend": {
+      "import_names": [
+        "portend"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "3.1.0",
+      "native_pkg": "python3-portend",
+      "native_version": null,
+      "note": "cherrypy",
+      "status": "missing"
+    },
+    "prometheus-client": {
+      "import_names": [
+        "prometheus_client"
+      ],
+      "import_sites": [
+        "salt/utils/metrics.py:434"
+      ],
+      "import_tier": "indented",
+      "lock_version": "0.25.0",
+      "native_pkg": "python3-prometheus-client",
+      "native_version": null,
+      "status": "missing"
+    },
+    "propcache": {
+      "import_names": [
+        "propcache"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "0.3.2",
+      "native_pkg": "python3-propcache",
+      "native_version": null,
+      "status": "missing"
+    },
+    "protobuf": {
+      "import_names": [
+        "google.protobuf"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "6.33.6",
+      "native_pkg": "python3-protobuf",
+      "native_version": "3.14.0",
+      "status": "present"
+    },
+    "psutil": {
+      "import_names": [
+        "psutil"
+      ],
+      "import_sites": [
+        "salt/platform/win.py:23",
+        "salt/beacons/diskusage.py:16",
+        "salt/beacons/memusage.py:15",
+        "salt/beacons/network_info.py:12",
+        "salt/beacons/ps.py:10",
+        "salt/beacons/swapusage.py:15",
+        "salt/config/__init__.py:45",
+        "salt/master.py:153",
+        "salt/minion.py:94",
+        "salt/minion.py:134",
+        "salt/minion.py:2608",
+        "salt/minion.py:2652",
+        "salt/modules/ps.py:17",
+        "salt/modules/restartcheck.py:28",
+        "salt/modules/saltutil.py:64",
+        "salt/modules/win_status.py:38",
+        "salt/utils/gitfs.py:91",
+        "salt/utils/process.py:46",
+        "salt/utils/win_functions.py:13",
+        "salt/utils/win_functions.py:24"
+      ],
+      "import_tier": "module-top",
+      "lock_version": "5.9.8",
+      "native_pkg": "python3-psutil",
+      "native_version": "5.8.0",
+      "status": "present"
+    },
+    "pyasn1": {
+      "import_names": [
+        "pyasn1"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "0.6.4",
+      "native_pkg": "python3-pyasn1",
+      "native_version": "0.4.8",
+      "status": "present"
+    },
+    "pycparser": {
+      "import_names": [
+        "pycparser"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "2.23",
+      "native_pkg": "python3-pycparser",
+      "native_version": "2.20",
+      "status": "present"
+    },
+    "pycryptodomex": {
+      "import_names": [
+        "Cryptodome"
+      ],
+      "import_sites": [
+        "salt/utils/pycrypto.py:19"
+      ],
+      "import_tier": "indented",
+      "lock_version": "3.23.0",
+      "native_pkg": "python3-pycryptodomex",
+      "native_version": "3.11.0",
+      "status": "present"
+    },
+    "pygments": {
+      "import_names": [
+        "pygments"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "2.20.0",
+      "native_pkg": "python3-pygments",
+      "native_version": "2.7.4",
+      "status": "present"
+    },
+    "pyopenssl": {
+      "import_names": [
+        "OpenSSL"
+      ],
+      "import_sites": [
+        "salt/beacons/cert_info.py:18",
+        "salt/modules/tls.py:126",
+        "salt/modules/tls.py:155",
+        "salt/modules/x509.py:54"
+      ],
+      "import_tier": "indented",
+      "lock_version": "26.2.0",
+      "native_pkg": "python3-pyopenssl",
+      "native_version": "21.0.0",
+      "status": "present"
+    },
+    "python-dateutil": {
+      "import_names": [
+        "dateutil"
+      ],
+      "import_sites": [
+        "salt/grains/core.py:100",
+        "salt/modules/schedule.py:23",
+        "salt/runners/jobs.py:20",
+        "salt/utils/schedule.py:51"
+      ],
+      "import_tier": "indented",
+      "lock_version": "2.9.0.post0",
+      "native_pkg": "python3-dateutil",
+      "native_version": "2.8.1",
+      "status": "present"
+    },
+    "python-discovery": {
+      "import_names": [
+        "discovery"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "1.4.0",
+      "native_pkg": "python3-python-discovery",
+      "native_version": null,
+      "status": "missing"
+    },
+    "python-gnupg": {
+      "import_names": [
+        "gnupg"
+      ],
+      "import_sites": [
+        "salt/modules/debuild_pkgbuild.py:34",
+        "salt/modules/gpg.py:42",
+        "salt/modules/gpg.py:285",
+        "salt/modules/rpmbuild_pkgbuild.py:32",
+        "salt/utils/smtp.py:36"
+      ],
+      "import_tier": "indented",
+      "lock_version": "0.5.6",
+      "native_pkg": "python3-python-gnupg",
+      "native_version": null,
+      "note": "works if gpg binary available",
+      "status": "missing"
+    },
+    "pytz": {
+      "import_names": [
+        "pytz"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "2024.1",
+      "native_pkg": "python3-pytz",
+      "native_version": "2022.7.1",
+      "status": "present"
+    },
+    "pyyaml": {
+      "import_names": [
+        "yaml"
+      ],
+      "import_sites": [
+        "salt/grains/extra.py:5",
+        "salt/modules/grains.py:20",
+        "salt/modules/junos.py:23",
+        "salt/modules/schedule.py:16",
+        "salt/renderers/yaml.py:11",
+        "salt/renderers/yaml.py:12",
+        "salt/renderers/yaml.py:13",
+        "salt/serializers/yaml.py:15",
+        "salt/serializers/yaml.py:16",
+        "salt/serializers/yaml.py:17",
+        "salt/serializers/yamlex.py:111",
+        "salt/serializers/yamlex.py:112",
+        "salt/serializers/yamlex.py:113",
+        "salt/serializers/yamlex.py:114",
+        "salt/utils/thin.py:37",
+        "salt/utils/yaml.py:7",
+        "salt/utils/yamldumper.py:14",
+        "salt/utils/yamlencoding.py:8",
+        "salt/utils/yamlloader.py:8",
+        "salt/utils/yamlloader.py:9",
+        "salt/utils/yamlloader.py:10",
+        "salt/utils/yamlloader_old.py:9",
+        "salt/utils/yamlloader_old.py:10",
+        "salt/utils/yamlloader_old.py:11",
+        "salt/utils/yamldumper.py:22",
+        "salt/utils/yamldumper.py:23",
+        "salt/utils/yamldumper.py:25"
+      ],
+      "import_tier": "module-top",
+      "lock_version": "6.0.3",
+      "native_pkg": "python3-pyyaml",
+      "native_version": "5.4.1",
+      "status": "present"
+    },
+    "pyzmq": {
+      "import_names": [
+        "zmq"
+      ],
+      "import_sites": [
+        "salt/transport/zeromq.py:30",
+        "salt/transport/zeromq.py:31",
+        "salt/transport/zeromq.py:32",
+        "salt/transport/zeromq.py:33",
+        "salt/grains/core.py:3245",
+        "salt/payload.py:21",
+        "salt/transport/zeromq.py:48",
+        "salt/utils/verify.py:49",
+        "salt/utils/zeromq.py:14"
+      ],
+      "import_tier": "feature-opt-in",
+      "lock_version": "27.1.0",
+      "native_pkg": "python3-pyzmq",
+      "native_version": null,
+      "note": "absolutely needed",
+      "owning_features": [
+        "zeromq transport"
+      ],
+      "status": "missing"
+    },
+    "requests": {
+      "import_names": [
+        "requests"
+      ],
+      "import_sites": [
+        "salt/modules/chocolatey.py:13",
+        "salt/utils/aws.py:22",
+        "salt/utils/relenv.py:5",
+        "salt/utils/thin.py:28",
+        "salt/cloud/clouds/saltify.py:41",
+        "salt/utils/cloud.py:2977",
+        "salt/utils/http.py:68",
+        "salt/utils/iam.py:12",
+        "salt/utils/namecheap.py:24",
+        "salt/utils/s3.py:18"
+      ],
+      "import_tier": "module-top",
+      "lock_version": "2.32.5",
+      "native_pkg": "python3-requests",
+      "native_version": "2.25.1",
+      "status": "present"
+    },
+    "rich": {
+      "import_names": [
+        "rich"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "15.0.0",
+      "native_pkg": "python3-rich",
+      "native_version": null,
+      "status": "missing"
+    },
+    "setproctitle": {
+      "import_names": [
+        "setproctitle"
+      ],
+      "import_sites": [
+        "salt/channel/server.py:24",
+        "salt/utils/process.py:53"
+      ],
+      "import_tier": "indented",
+      "lock_version": "1.3.7",
+      "native_pkg": "python3-setproctitle",
+      "native_version": "1.1.10",
+      "status": "present"
+    },
+    "setuptools": {
+      "import_names": [
+        "setuptools"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "82.0.1",
+      "native_pkg": "python3-setuptools",
+      "native_version": "59.6.0",
+      "status": "present"
+    },
+    "shellingham": {
+      "import_names": [
+        "shellingham"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "1.5.4",
+      "native_pkg": "python3-shellingham",
+      "native_version": null,
+      "status": "missing"
+    },
+    "six": {
+      "import_names": [
+        "six"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "1.16.0",
+      "native_pkg": "python3-six",
+      "native_version": "1.15.0",
+      "status": "present"
+    },
+    "smmap": {
+      "import_names": [
+        "smmap"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "5.0.2",
+      "native_pkg": "python3-smmap",
+      "native_version": null,
+      "status": "missing"
+    },
+    "tempora": {
+      "import_names": [
+        "tempora"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "5.3.0",
+      "native_pkg": "python3-tempora",
+      "native_version": null,
+      "note": "cherrypy",
+      "status": "missing"
+    },
+    "timelib": {
+      "import_names": [
+        "timelib"
+      ],
+      "import_sites": [
+        "salt/utils/dateutils.py:11"
+      ],
+      "import_tier": "indented",
+      "lock_version": "0.3.0",
+      "native_pkg": "python3-timelib",
+      "native_version": null,
+      "note": "missing ok",
+      "status": "missing"
+    },
+    "tornado": {
+      "import_names": [
+        "tornado"
+      ],
+      "import_sites": [
+        "salt/channel/client.py:12",
+        "salt/channel/client.py:13",
+        "salt/channel/client.py:14",
+        "salt/channel/server.py:21",
+        "salt/crypt.py:26",
+        "salt/crypt.py:27",
+        "salt/engines/webhook.py:5",
+        "salt/engines/webhook.py:6",
+        "salt/engines/webhook.py:7",
+        "salt/fileclient.py:18",
+        "salt/minion.py:26",
+        "salt/minion.py:27",
+        "salt/netapi/rest_tornado/saltnado.py:196",
+        "salt/netapi/rest_tornado/saltnado.py:197",
+        "salt/netapi/rest_tornado/saltnado.py:198",
+        "salt/netapi/rest_tornado/saltnado.py:199",
+        "salt/netapi/rest_tornado/saltnado.py:200",
+        "salt/netapi/rest_tornado/saltnado.py:201",
+        "salt/netapi/rest_tornado/saltnado.py:202",
+        "salt/netapi/rest_tornado/saltnado_websockets.py:294",
+        "salt/netapi/rest_tornado/saltnado_websockets.py:295",
+        "salt/transport/tcp.py:25",
+        "salt/transport/tcp.py:26",
+        "salt/transport/tcp.py:27",
+        "salt/transport/tcp.py:28",
+        "salt/transport/tcp.py:29",
+        "salt/transport/tcp.py:30",
+        "salt/transport/tcp.py:31",
+        "salt/transport/ws.py:10",
+        "salt/transport/zeromq.py:24",
+        "salt/transport/zeromq.py:25",
+        "salt/transport/zeromq.py:26",
+        "salt/transport/zeromq.py:27",
+        "salt/transport/zeromq.py:28",
+        "salt/transport/zeromq.py:29",
+        "salt/utils/asynchronous.py:14",
+        "salt/utils/asynchronous.py:15",
+        "salt/utils/event.py:63",
+        "salt/utils/event.py:64",
+        "salt/utils/files.py:21",
+        "salt/utils/gitfs.py:28",
+        "salt/utils/http.py:24",
+        "salt/utils/http.py:25",
+        "salt/utils/http.py:26",
+        "salt/utils/http.py:27",
+        "salt/utils/thin.py:29",
+        "salt/netapi/rest_tornado/__init__.py:17",
+        "salt/netapi/rest_tornado/__init__.py:121",
+        "salt/utils/channel.py:90"
+      ],
+      "import_tier": "module-top",
+      "lock_version": "6.5.10",
+      "native_pkg": "python3-tornado",
+      "native_version": "6.1.0",
+      "status": "present"
+    },
+    "typer": {
+      "import_names": [
+        "typer"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "0.23.2",
+      "native_pkg": "python3-typer",
+      "native_version": null,
+      "status": "missing"
+    },
+    "typer-slim": {
+      "import_names": [
+        "typer"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "0.23.2",
+      "native_pkg": "python3-typer-slim",
+      "native_version": null,
+      "status": "missing"
+    },
+    "typing-extensions": {
+      "import_names": [
+        "typing_extensions"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "4.14.1",
+      "native_pkg": "python3-typing-extensions",
+      "native_version": "3.7.4.3",
+      "status": "present"
+    },
+    "urllib3": {
+      "import_names": [
+        "urllib3"
+      ],
+      "import_sites": [
+        "salt/utils/thin.py:30",
+        "salt/utils/etcd_util.py:87"
+      ],
+      "import_tier": "module-top",
+      "lock_version": "1.26.20",
+      "native_pkg": "python3-urllib3",
+      "native_version": "1.25.10",
+      "status": "present"
+    },
+    "virtualenv": {
+      "import_names": [
+        "virtualenv"
+      ],
+      "import_sites": [
+        "salt/modules/virtualenv_mod.py:63"
+      ],
+      "import_tier": "indented",
+      "lock_version": "21.4.2",
+      "native_pkg": "python3-virtualenv",
+      "native_version": "20.4.0",
+      "status": "present"
+    },
+    "xxhash": {
+      "import_names": [
+        "xxhash"
+      ],
+      "import_sites": [
+        "salt/cluster/ring.py:53",
+        "salt/utils/mmap_cache.py:49"
+      ],
+      "import_tier": "indented",
+      "lock_version": "3.7.0",
+      "native_pkg": "python3-xxhash",
+      "native_version": null,
+      "status": "missing"
+    },
+    "yarl": {
+      "import_names": [
+        "yarl"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "1.20.1",
+      "native_pkg": "python3-yarl",
+      "native_version": null,
+      "note": "needed for websocket transport",
+      "status": "missing"
+    },
+    "zc-lockfile": {
+      "import_names": [
+        "zc.lockfile"
+      ],
+      "import_sites": [],
+      "import_tier": "none",
+      "lock_version": "3.0.post1",
+      "native_pkg": "python3-zc-lockfile",
+      "native_version": null,
+      "note": "cherrypy",
+      "status": "missing"
+    },
+    "zipp": {
+      "import_names": [
+        "zipp"
+      ],
+      "import_sites": [
+        "salt/ext/importlib_metadata/__init__.py:36"
+      ],
+      "import_tier": "indented",
+      "lock_version": "3.23.1",
+      "native_pkg": "python3-zipp",
+      "native_version": null,
+      "note": "needed by importlib-metadata",
+      "status": "missing"
+    }
+  },
+  "probed_at": "2026-11-22T06:04:35Z",
+  "python_version": "3.9",
+  "python_version_full": "3.9.25",
+  "setuptools_version": "59.6.0",
+  "slug": "amazonlinux-2023",
+  "wheel_version": "0.37.1"
+}

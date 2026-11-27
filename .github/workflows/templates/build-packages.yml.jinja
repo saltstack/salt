@@ -33,6 +33,7 @@
       source: "<{ backend }>"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
+      native-slugs: ${{ needs.prepare-workflow.outputs.native-rpm-slugs }}
     <%- if gh_environment != "ci" %>
       environment: <{ gh_environment }>
       sign-macos-packages: <% if gh_environment == 'nightly' -%> false <%- else -%> ${{ inputs.sign-macos-packages }} <%- endif %>

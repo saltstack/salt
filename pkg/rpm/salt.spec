@@ -3,6 +3,28 @@
 %bcond_with tests
 %bcond_with docs
 
+# Native-package flavor. Default is the historical onedir build; invoke
+# as `rpmbuild -bb --with native --define 'native_slug <slug>' ...`
+# to produce a package that installs Salt into the system Python with
+# a vendor dir for deps the distro doesn't ship. See
+# cicd/native-deps/README.md for the slug set and per-slug vendor plan.
+%bcond_with native
+# Flavor suffix for Release so `rpm -q salt-minion` reveals which
+# variant is installed. Empty for onedir.
+%global _native_rel %{?with_native:.native}
+
+# Default SALT_ONEDIR_HARDEN=1 on native builds. The hardened chown
+# blocks in %%pre/%%post/%%posttrans fire based on this variable;
+# inserting the default once per scriptlet (after the sysconfig source)
+# keeps them opt-outable via /etc/sysconfig/salt-minion-setup.
+%if %{with native}
+%global _native_default_harden if [ -z "${SALT_ONEDIR_HARDEN+x}" ]; then SALT_ONEDIR_HARDEN=1; fi
+%global _salt_python3 /usr/bin/python3
+%else
+%global _native_default_harden :
+%global _salt_python3 /opt/saltstack/salt/bin/python3
+%endif
+
 # Disable build-id symlinks
 %define _build_id_links none
 %undefine _missing_build_ids_terminate_build
@@ -18,7 +40,13 @@
 %global _SALT_GROUP salt
 %global _SALT_USER salt
 %global _SALT_NAME Salt
+# Native builds have no onedir tree to blanket-chown, so hardened mode
+# (per-daemon /var/lib/salt/<daemon>/home) is the only sane default.
+%if %{with native}
+%global _SALT_HOME /var/lib/salt/home
+%else
 %global _SALT_HOME /opt/saltstack/salt
+%endif
 
 # salt-master current user and group
 %global _MS_CUR_USER %{_SALT_USER}
@@ -41,7 +69,7 @@
 
 Name:    salt
 Version: 3008.5
-Release: 0
+Release: 0%{_native_rel}
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
 License: ASL 2.0
@@ -71,6 +99,37 @@ Requires(post):      coreutils
 Requires(preun):     findutils
 Requires(posttrans): findutils
 
+%if %{with native}
+# Native build: wheel + pip-install. Everything the Salt source tree
+# needs at runtime either lives in the distro's python3-* repo or in
+# salt/_vendor/ (populated by `pip install --target` at build time).
+BuildRequires: python3
+BuildRequires: python3-pip
+BuildRequires: python3-setuptools
+BuildRequires: python3-wheel
+BuildRequires: openssl
+
+# Runtime deps -- the "present" set from cicd/native-deps/<slug>.json.
+# Floors are intentionally omitted here; the floors.yml review artifact
+# feeds into requirements/*.in, which the wheel build enforces.
+Requires: python3
+Requires: python3-cryptography
+Requires: python3-dateutil
+Requires: python3-distro
+Requires: python3-jinja2
+Requires: python3-jmespath
+Requires: python3-markupsafe
+Requires: python3-msgpack
+Requires: python3-packaging
+Requires: python3-psutil
+Requires: python3-pyopenssl
+Requires: python3-pyyaml
+Requires: python3-requests
+Requires: python3-six
+Requires: python3-tornado
+Requires: python3-urllib3
+Requires: python3-zmq
+%else
 BuildRequires: python3
 BuildRequires: python3-pip
 BuildRequires: openssl
@@ -82,10 +141,15 @@ BuildRequires: git
 BuildRequires: libxcrypt-compat
 %endif
 %endif
+%endif
 
-# Build debuginfo package
+# Build debuginfo package. Native is pure Python -- nothing to extract
+# debuginfo from, and find-debuginfo trips on $RPM_BUILD_ROOT being
+# unset in %%install on some rpm versions (Photon 5).
+%if %{without native}
 %debug_package
 %_no_recompute_build_ids 1
+%endif
 
 %description
 Salt is a distributed remote execution system used to execute commands and
@@ -202,6 +266,49 @@ rm -rf $RPM_BUILD_DIR
 mkdir -p $RPM_BUILD_DIR/build
 cd $RPM_BUILD_DIR
 
+%if %{with native}
+# Native build: one pure wheel, no relenv, no onedir. The vendor dir
+# gets populated at %%install time from the per-slug audit output.
+cd %{_salt_src}
+python3 -m venv --clear --copies $RPM_BUILD_DIR/build/venv
+# setuptools>=65 is needed by salt_build_backend (imports
+# setuptools.build_meta.build_editable, added in 65). Rocky 9 / AL2023
+# system setuptools pre-date this; --upgrade force-replaces it.
+$RPM_BUILD_DIR/build/venv/bin/python3 -m pip install --upgrade \
+    'setuptools>=65.0' build wheel \
+    looseversion packaging 'importlib-metadata>=8.7.0'
+$RPM_BUILD_DIR/build/venv/bin/python3 -m build --wheel --no-isolation \
+    --outdir $RPM_BUILD_DIR/build/native
+
+# Generate master config (same massage as onedir).
+sed 's/#user: root/user: salt/g' %{_salt_src}/conf/master > $RPM_BUILD_DIR/build/master
+
+# Stub man pages so the %%install block can install something; proper
+# sphinx-generated man pages are a follow-up. Installing stubs keeps
+# %files globs from failing with "no files" and lets `man salt` at
+# least not 404.
+mkdir -p $RPM_BUILD_DIR/build/native/man
+for _mp in salt salt-cp salt-key salt-master salt-run salt-call \
+           salt-minion salt-proxy salt-syndic salt-api salt-cloud \
+           salt-ssh spm; do
+    cat > "$RPM_BUILD_DIR/build/native/man/${_mp}.1" <<MANEOF
+.TH ${_mp} 1 "" "%{version}" "Salt"
+.SH NAME
+${_mp} \- see online docs at https://docs.saltproject.io/
+.SH SYNOPSIS
+${_mp} [options]
+.SH DESCRIPTION
+Full documentation at https://docs.saltproject.io/.
+MANEOF
+done
+
+# Photon's rpm auto-sources $RPM_BUILD_DIR/rpmbuild.env at the top of
+# %%install. The onedir build backend writes it; our native build
+# doesn't need the build flags, but the file must exist.
+: > $RPM_BUILD_DIR/rpmbuild.env
+
+%else
+
 %if "%{getenv:SALT_ONEDIR_ARCHIVE}" == ""
   export RELENV_DATA=${HOME:-%{getenv:HOME}}/.local/relenv
   export PIP_CONSTRAINT=%{_salt_src}/requirements/constraints.txt
@@ -254,12 +361,50 @@ cd $RPM_BUILD_DIR
 
   cd $RPM_BUILD_DIR
 %endif
+%endif
 
 
 %install
 rm -rf %{buildroot}
+
+%if %{with native}
+# Install the wheel into system site-packages, scripts into /usr/bin
+# via the wheel's console_scripts. --root stages into buildroot.
+_WHL=$(ls %{_builddir}/build/native/salt-*.whl | head -1)
+python3 -m pip install --no-deps --no-build-isolation --no-compile \
+    --root %{buildroot} --prefix %{_prefix} \
+    "$_WHL"
+
+# Vendor the module-top-missing deps into salt/_vendor/. The per-slug
+# vendor list comes from cicd/native-deps/<slug>-vendor.txt; the slug
+# is passed on the rpmbuild command line as --define 'native_slug ...'.
+# The build driver is expected to pre-stage wheels under
+# cicd/native-deps/wheels/ so pip can satisfy the list offline.
+%if "%{?native_slug}" != ""
+mkdir -p %{buildroot}%{python3_sitelib}/salt/_vendor
+if [ -s %{_salt_src}/cicd/native-deps/%{native_slug}-vendor.txt ]; then
+    _VENDOR_ARGS=""
+    if [ -d %{_salt_src}/cicd/native-deps/wheels ]; then
+        _VENDOR_ARGS="--no-index --find-links=%{_salt_src}/cicd/native-deps/wheels"
+    fi
+    python3 -m pip install --no-deps --no-build-isolation --no-compile \
+        $_VENDOR_ARGS \
+        --target %{buildroot}%{python3_sitelib}/salt/_vendor \
+        -r %{_salt_src}/cicd/native-deps/%{native_slug}-vendor.txt
+fi
+%endif
+
+# salt-vendor.pth so salt/_vendor/ wins sys.path at interpreter
+# startup, before anything imports `salt`. .pth over sitecustomize.py
+# because Debian ships its own /usr/lib/python3.X/sitecustomize.py
+# that shadows ours; .pth has no such collision.
+install -D -m 0644 %{_salt_src}/pkg/common/salt-vendor.pth \
+    %{buildroot}%{python3_sitelib}/salt-vendor.pth
+
+%else
 mkdir -p %{buildroot}/opt/saltstack
 cp -R $RPM_BUILD_DIR/build/salt %{buildroot}/opt/saltstack/
+%endif
 
 # Add some directories
 install -d -m 0755 %{buildroot}%{_var}/log/salt
@@ -298,6 +443,12 @@ install -d -m 0700 %{buildroot}%{_sysconfdir}/salt/cloud.providers.d
 install -d -m 0755 %{buildroot}%{_sysconfdir}/salt/proxy.d
 install -d -m 0755 %{buildroot}%{_bindir}
 
+%if %{without native}
+# Onedir: copy wrapper scripts from the relenv tree into /usr/bin. The
+# %post scriptlets later replace these with symlinks back into the
+# onedir so upgrades keep paths pointing at the live install tree.
+# Native build skips this entirely -- the wheel's console_scripts
+# generate real entry-point wrappers in %{_prefix}/bin.
 install -m 0755 %{buildroot}/opt/saltstack/salt/salt %{buildroot}%{_bindir}/salt
 install -m 0755 %{buildroot}/opt/saltstack/salt/salt-call %{buildroot}%{_bindir}/salt-call
 install -m 0755 %{buildroot}/opt/saltstack/salt/salt-master %{buildroot}%{_bindir}/salt-master
@@ -312,10 +463,17 @@ install -m 0755 %{buildroot}/opt/saltstack/salt/salt-syndic %{buildroot}%{_bindi
 install -m 0755 %{buildroot}/opt/saltstack/salt/salt-proxy %{buildroot}%{_bindir}/salt-proxy
 install -m 0755 %{buildroot}/opt/saltstack/salt/spm %{buildroot}%{_bindir}/spm
 install -m 0755 %{buildroot}/opt/saltstack/salt/salt-pip %{buildroot}%{_bindir}/salt-pip
+%endif
 
 # Add the config files
 install -p -m 0640 %{_salt_src}/conf/minion %{buildroot}%{_sysconfdir}/salt/minion
+%if %{with native}
+# Photon 5's rpm leaves $RPM_BUILD_DIR unset during %%install; use the
+# macro directly on native. Onedir stays on $RPM_BUILD_DIR unchanged.
+install -p -m 0640 %{_builddir}/build/master %{buildroot}%{_sysconfdir}/salt/master
+%else
 install -p -m 0640 $RPM_BUILD_DIR/build/master %{buildroot}%{_sysconfdir}/salt/master
+%endif
 install -p -m 0640 %{_salt_src}/conf/cloud %{buildroot}%{_sysconfdir}/salt/cloud
 install -p -m 0640 %{_salt_src}/conf/roster %{buildroot}%{_sysconfdir}/salt/roster
 install -p -m 0640 %{_salt_src}/conf/proxy %{buildroot}%{_sysconfdir}/salt/proxy
@@ -341,23 +499,30 @@ install -p -m 0644 %{_salt_src}/pkg/rpm/salt.bash %{buildroot}%{_sysconfdir}/bas
 mkdir -p %{buildroot}%{fish_dir}
 install -p -m 0644 %{_salt_src}/pkg/common/fish-completions/*.fish  %{buildroot}%{fish_dir}/
 
-# Man files
+# Man files -- native uses stubs from $RPM_BUILD_DIR/build/native/man
+# so the install block below can stay path-shape-identical for both
+# flavors.
 mkdir -p %{buildroot}%{_mandir}/man1
 mkdir -p %{buildroot}%{_mandir}/man7
-install -p -m 0644 %{_salt_src}/doc/man/spm.1 %{buildroot}%{_mandir}/man1/spm.1
-install -p -m 0644 %{_salt_src}/doc/man/spm.1 %{buildroot}%{_mandir}/man1/spm.1
-install -p -m 0644 %{_salt_src}/doc/man/salt.1 %{buildroot}%{_mandir}/man1/salt.1
-install -p -m 0644 %{_salt_src}/doc/man/salt-cp.1 %{buildroot}%{_mandir}/man1/salt-cp.1
-install -p -m 0644 %{_salt_src}/doc/man/salt-key.1 %{buildroot}%{_mandir}/man1/salt-key.1
-install -p -m 0644 %{_salt_src}/doc/man/salt-master.1 %{buildroot}%{_mandir}/man1/salt-master.1
-install -p -m 0644 %{_salt_src}/doc/man/salt-run.1 %{buildroot}%{_mandir}/man1/salt-run.1
-install -p -m 0644 %{_salt_src}/doc/man/salt-call.1 %{buildroot}%{_mandir}/man1/salt-call.1
-install -p -m 0644 %{_salt_src}/doc/man/salt-minion.1 %{buildroot}%{_mandir}/man1/salt-minion.1
-install -p -m 0644 %{_salt_src}/doc/man/salt-proxy.1 %{buildroot}%{_mandir}/man1/salt-proxy.1
-install -p -m 0644 %{_salt_src}/doc/man/salt-syndic.1 %{buildroot}%{_mandir}/man1/salt-syndic.1
-install -p -m 0644 %{_salt_src}/doc/man/salt-api.1 %{buildroot}%{_mandir}/man1/salt-api.1
-install -p -m 0644 %{_salt_src}/doc/man/salt-cloud.1 %{buildroot}%{_mandir}/man1/salt-cloud.1
-install -p -m 0644 %{_salt_src}/doc/man/salt-ssh.1 %{buildroot}%{_mandir}/man1/salt-ssh.1
+%if %{with native}
+%global _man_src %{_builddir}/build/native/man
+%else
+%global _man_src %{_salt_src}/doc/man
+%endif
+install -p -m 0644 %{_man_src}/spm.1 %{buildroot}%{_mandir}/man1/spm.1
+install -p -m 0644 %{_man_src}/spm.1 %{buildroot}%{_mandir}/man1/spm.1
+install -p -m 0644 %{_man_src}/salt.1 %{buildroot}%{_mandir}/man1/salt.1
+install -p -m 0644 %{_man_src}/salt-cp.1 %{buildroot}%{_mandir}/man1/salt-cp.1
+install -p -m 0644 %{_man_src}/salt-key.1 %{buildroot}%{_mandir}/man1/salt-key.1
+install -p -m 0644 %{_man_src}/salt-master.1 %{buildroot}%{_mandir}/man1/salt-master.1
+install -p -m 0644 %{_man_src}/salt-run.1 %{buildroot}%{_mandir}/man1/salt-run.1
+install -p -m 0644 %{_man_src}/salt-call.1 %{buildroot}%{_mandir}/man1/salt-call.1
+install -p -m 0644 %{_man_src}/salt-minion.1 %{buildroot}%{_mandir}/man1/salt-minion.1
+install -p -m 0644 %{_man_src}/salt-proxy.1 %{buildroot}%{_mandir}/man1/salt-proxy.1
+install -p -m 0644 %{_man_src}/salt-syndic.1 %{buildroot}%{_mandir}/man1/salt-syndic.1
+install -p -m 0644 %{_man_src}/salt-api.1 %{buildroot}%{_mandir}/man1/salt-api.1
+install -p -m 0644 %{_man_src}/salt-cloud.1 %{buildroot}%{_mandir}/man1/salt-cloud.1
+install -p -m 0644 %{_man_src}/salt-ssh.1 %{buildroot}%{_mandir}/man1/salt-ssh.1
 
 # Sys V service files
 mkdir -p %{buildroot}%{_sysconfdir}/init.d
@@ -383,7 +548,13 @@ rm -rf %{buildroot}
 %doc %{_mandir}/man1/spm.1*
 %{_bindir}/spm
 %{_bindir}/salt-pip
+%if %{with native}
+%{python3_sitelib}/salt/
+%{python3_sitelib}/salt-*.dist-info/
+%{python3_sitelib}/salt-vendor.pth
+%else
 /opt/saltstack/salt
+%endif
 %dir %{_sysconfdir}/salt
 %dir %{_sysconfdir}/salt/pki
 
@@ -480,9 +651,12 @@ rm -rf %{buildroot}
 if [ -f /etc/sysconfig/salt-minion-setup ]; then
     . /etc/sysconfig/salt-minion-setup
 fi
+%{_native_default_harden}
 [ -n "$SALT_USER" ] || SALT_USER=%{_SALT_USER}
 [ -n "$SALT_GROUP" ] || SALT_GROUP=%{_SALT_GROUP}
 [ -n "$SALT_NAME" ] || SALT_NAME=%{_SALT_NAME}
+
+%{_native_default_harden}
 
 # SALT_ONEDIR_HARDEN=1 opts in to relocating the salt user's writable
 # state out of /opt/saltstack/salt into per-daemon
@@ -511,10 +685,15 @@ fi
 test -d $SALT_HOME || mkdir -p $SALT_HOME
 # 3. create user if not existing
 #         -g $SALT_GROUP \
+# SALT_SHELL is documented in doc/ref/configuration/nonroot.rst and
+# honored by pkg/debian/salt-common.preinst. The RPM useradd previously
+# hardcoded /sbin/nologin; thread SALT_SHELL through to match. Default
+# behavior (no sysconfig override) is unchanged.
+[ -n "$SALT_SHELL" ] || SALT_SHELL=/sbin/nologin
 if ! getent passwd | grep -q "^$SALT_USER:"; then
   useradd --system \
           --no-create-home \
-          -s /sbin/nologin \
+          -s "$SALT_SHELL" \
           -g $SALT_GROUP \
           $SALT_USER 2>/dev/null || true
 fi
@@ -569,6 +748,7 @@ fi
 if [ -f /etc/sysconfig/salt-minion-setup ]; then
     . /etc/sysconfig/salt-minion-setup
 fi
+%{_native_default_harden}
 
 # Detect whether the current RPM transaction was initiated from within
 # the ``salt-minion.service`` control group -- i.e. a running minion is
@@ -715,15 +895,24 @@ fi
 
 
 %post
+%if %{without native}
 ln -s -f /opt/saltstack/salt/spm %{_bindir}/spm
 ln -s -f /opt/saltstack/salt/salt-pip %{_bindir}/salt-pip
+%endif
 
 
 %post cloud
+%if %{without native}
 ln -s -f /opt/saltstack/salt/salt-cloud %{_bindir}/salt-cloud
+%endif
 
 
 %post master
+%if %{without native}
+# Onedir: re-point /usr/bin/salt-* at the live install tree, and
+# refresh the RHEL 8 FIPS-mode libssl HMACs for the relenv-shipped
+# OpenSSL. Native build has no relenv tree -- scripts come from
+# wheel entry points and OpenSSL comes from the OS.
 ln -s -f /opt/saltstack/salt/salt %{_bindir}/salt
 ln -s -f /opt/saltstack/salt/salt-cp %{_bindir}/salt-cp
 ln -s -f /opt/saltstack/salt/salt-key %{_bindir}/salt-key
@@ -742,6 +931,7 @@ if [ $1 -lt 2 ]; then
     fi
   fi
 fi
+%endif
 # %%systemd_post salt-master.service
 if [ $1 -gt 1 ] ; then
   # Upgrade
@@ -752,7 +942,9 @@ else
 fi
 
 %post syndic
+%if %{without native}
 ln -s -f /opt/saltstack/salt/salt-syndic %{_bindir}/salt-syndic
+%endif
 # %%systemd_post salt-syndic.service
 if [ $1 -gt 1 ] ; then
   # Upgrade
@@ -767,7 +959,9 @@ fi
 if [ -f /etc/sysconfig/salt-minion-setup ]; then
     . /etc/sysconfig/salt-minion-setup
 fi
+%{_native_default_harden}
 
+%if %{without native}
 ln -s -f /opt/saltstack/salt/salt-minion %{_bindir}/salt-minion
 ln -s -f /opt/saltstack/salt/salt-call %{_bindir}/salt-call
 ln -s -f /opt/saltstack/salt/salt-proxy %{_bindir}/salt-proxy
@@ -784,6 +978,7 @@ if [ $1 -lt 2 ]; then
     fi
   fi
 fi
+%endif
 # %%systemd_post salt-minion.service
 if [ $1 -gt 1 ] ; then
   # Upgrade
@@ -791,7 +986,7 @@ if [ $1 -gt 1 ] ; then
   # preserved); operators may opt in with SALT_ONEDIR_HARDEN=1. The
   # default flips on 3009.0. See issue #70198.
   if [ "$SALT_ONEDIR_HARDEN" = "1" ] && [ -z "$SALT_EXTRAS_DIR" ]; then
-      PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush()" 2>/dev/null || echo "")
+      PY_VER=$(%{_salt_python3} -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush()" 2>/dev/null || echo "")
       [ -n "$PY_VER" ] && SALT_EXTRAS_DIR=/var/lib/salt/minion/extras-${PY_VER}
   fi
   # Restore ownership before restarting service
@@ -863,10 +1058,14 @@ else
 fi
 
 %post ssh
+%if %{without native}
 ln -s -f /opt/saltstack/salt/salt-ssh %{_bindir}/salt-ssh
+%endif
 
 %post api
+%if %{without native}
 ln -s -f /opt/saltstack/salt/salt-api %{_bindir}/salt-api
+%endif
 # %%systemd_post salt-api.service
 if [ $1 -gt 1 ] ; then
   # Upgrade
@@ -878,10 +1077,16 @@ fi
 
 
 %posttrans
-# (Re)generate pycache in posttrans, so we're sure any old libraries have been uninstalled.
+%if %{without native}
+# (Re)generate pycache in posttrans, so we're sure any old libraries
+# have been uninstalled. Onedir only -- native uses the OS python's
+# site-packages, where bytecompile is handled by rpm's bytecompile
+# scriptlet (disabled for onedir via the __os_install_post sed at the
+# top of the spec).
 find /opt/saltstack/salt/lib -type f -name '*.pyc' -delete
 find /opt/saltstack/salt/lib -type d -name __pycache__ -empty -delete
 /opt/saltstack/salt/bin/python3 -m compileall -qq /opt/saltstack/salt/lib
+%endif
 
 
 %posttrans cloud
@@ -890,9 +1095,10 @@ find /opt/saltstack/salt/lib -type d -name __pycache__ -empty -delete
 if [ -f /etc/sysconfig/salt-minion-setup ]; then
     . /etc/sysconfig/salt-minion-setup
 fi
+%{_native_default_harden}
 [ -n "$SALT_USER" ] || SALT_USER=%{_SALT_USER}
 [ -n "$SALT_GROUP" ] || SALT_GROUP=%{_SALT_GROUP}
-PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
+PY_VER=$(%{_salt_python3} -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
 if [ "$SALT_ONEDIR_HARDEN" = "1" ]; then
     [ -n "$SALT_HOME" ] || SALT_HOME=/var/lib/salt/cloud/home
     if [ -z "$SALT_EXTRAS_DIR" ] && [ -n "$PY_VER" ]; then
@@ -961,11 +1167,12 @@ fi
 if [ -f /etc/sysconfig/salt-minion-setup ]; then
     . /etc/sysconfig/salt-minion-setup
 fi
+%{_native_default_harden}
 [ -n "$SALT_USER" ] || SALT_USER=%{_SALT_USER}
 [ -n "$SALT_GROUP" ] || SALT_GROUP=%{_SALT_GROUP}
 # SALT_ONEDIR_HARDEN default is unset on 3006.x (legacy layout
 # preserved). The default flips on 3009.0. See issue #70198.
-PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush()" 2>/dev/null || echo "")
+PY_VER=$(%{_salt_python3} -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush()" 2>/dev/null || echo "")
 if [ "$SALT_ONEDIR_HARDEN" = "1" ]; then
     [ -n "$SALT_HOME" ] || SALT_HOME=/var/lib/salt/master/home
     if [ -z "$SALT_EXTRAS_DIR" ] && [ -n "$PY_VER" ]; then
@@ -1031,9 +1238,10 @@ fi
 if [ -f /etc/sysconfig/salt-minion-setup ]; then
     . /etc/sysconfig/salt-minion-setup
 fi
+%{_native_default_harden}
 [ -n "$SALT_USER" ] || SALT_USER=%{_SALT_USER}
 [ -n "$SALT_GROUP" ] || SALT_GROUP=%{_SALT_GROUP}
-PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush()" 2>/dev/null || echo "")
+PY_VER=$(%{_salt_python3} -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush()" 2>/dev/null || echo "")
 if [ "$SALT_ONEDIR_HARDEN" = "1" ]; then
     [ -n "$SALT_HOME" ] || SALT_HOME=/var/lib/salt/syndic/home
     if [ -z "$SALT_EXTRAS_DIR" ] && [ -n "$PY_VER" ]; then
@@ -1095,9 +1303,10 @@ fi
 if [ -f /etc/sysconfig/salt-minion-setup ]; then
     . /etc/sysconfig/salt-minion-setup
 fi
+%{_native_default_harden}
 [ -n "$SALT_USER" ] || SALT_USER=%{_SALT_USER}
 [ -n "$SALT_GROUP" ] || SALT_GROUP=%{_SALT_GROUP}
-PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush()" 2>/dev/null || echo "")
+PY_VER=$(%{_salt_python3} -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush()" 2>/dev/null || echo "")
 if [ "$SALT_ONEDIR_HARDEN" = "1" ]; then
     [ -n "$SALT_HOME" ] || SALT_HOME=/var/lib/salt/api/home
     if [ -z "$SALT_EXTRAS_DIR" ] && [ -n "$PY_VER" ]; then
@@ -1171,7 +1380,16 @@ fi
 if [ -f /etc/sysconfig/salt-minion-setup ]; then
     . /etc/sysconfig/salt-minion-setup
 fi
-PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush()" 2>/dev/null || echo "")
+%{_native_default_harden}
+%if %{with native}
+# Native-only: apply SALT_USER/SALT_GROUP defaults so the fresh-install
+# branch below chowns state dirs to the salt user even when
+# /etc/sysconfig/salt-minion-setup is absent. The equivalent
+# latent-bug fix for onedir will land on master and merge-forward.
+[ -n "$SALT_USER" ] || SALT_USER=%{_SALT_USER}
+[ -n "$SALT_GROUP" ] || SALT_GROUP=%{_SALT_GROUP}
+%endif
+PY_VER=$(%{_salt_python3} -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush()" 2>/dev/null || echo "")
 if [ "$SALT_ONEDIR_HARDEN" = "1" ] && [ -z "$SALT_EXTRAS_DIR" ] && [ -n "$PY_VER" ]; then
     SALT_EXTRAS_DIR=/var/lib/salt/minion/extras-${PY_VER}
 fi
@@ -1301,11 +1519,14 @@ rm -f /tmp/.salt-minion-self-upgrade
 
 
 %preun
+%if %{without native}
 if [ $1 -eq 0 ]; then
-  # Uninstall
+  # Uninstall: clean up stale .pyc from the relenv tree. Native has
+  # nothing at /opt/saltstack; the system python owns its own bytecode.
   find /opt/saltstack/salt -type f -name '*.pyc' -delete
   find /opt/saltstack/salt -type d -name __pycache__ -empty -delete
 fi
+%endif
 
 %postun master
 # %%systemd_postun_with_restart salt-master.service
