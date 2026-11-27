@@ -405,6 +405,9 @@ async def post_master_init(self, master):
     self.functions["saltutil.sync_grains"](saltenv="base")
     self.grains_cache = self.opts["grains"]
     # Now setup the deltaproxies
+    startup_task = getattr(self, "_subproxy_startup_task", None)
+    if startup_task is not None:
+        startup_task.cancel()
     self.deltaproxy = {}
     self.deltaproxy_opts = {}
     self.deltaproxy_objs = {}
@@ -413,74 +416,102 @@ async def post_master_init(self, master):
     self.proxy_context = {}
     self.add_periodic_callback("cleanup", self.cleanup_subprocesses)
 
-    _failed = list()
+    ids = list(dict.fromkeys(self.opts["proxy"].get("ids", [])))
+    init_subproxy = functools.partial(
+        subproxy_post_master_init,
+        uid=uid,
+        opts=self.opts,
+        main_proxy=self.proxy,
+        main_utils=self.utils,
+    )
     if self.opts["proxy"].get("parallel_startup"):
         log.debug("Initiating parallel startup for proxies")
-        waitfor = []
-        for _id in self.opts["proxy"].get("ids", []):
-            waitfor.append(
-                subproxy_post_master_init(
-                    _id,
-                    uid,
-                    self.opts,
-                    self.proxy,
-                    self.utils,
-                )
-            )
-
-        results = await gather_subproxies(waitfor, self.opts["proxy"].get("ids", []))
-
-        _failed = self.opts["proxy"].get("ids", [])[:]
-        for sub_proxy_data in results:
-            minion_id = sub_proxy_data["proxy_opts"].get("id")
-            if minion_id in _failed:
-                _failed.remove(minion_id)
-
-            if sub_proxy_data["proxy_minion"]:
-                self.deltaproxy_opts[minion_id] = sub_proxy_data["proxy_opts"]
-                self.deltaproxy_objs[minion_id] = sub_proxy_data["proxy_minion"]
-
-                if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
-                    attach_req_channel(
-                        self.deltaproxy_objs[minion_id],
-                        sub_proxy_data["proxy_opts"],
-                        self.io_loop,
-                    )
+        results = await gather_subproxies(
+            [init_subproxy(minion_id) for minion_id in ids], ids
+        )
+        for result in results:
+            _register_subproxy(self, result)
     else:
         log.debug("Initiating non-parallel startup for proxies")
-        for _id in self.opts["proxy"].get("ids", []):
-            try:
-                sub_proxy_data = await subproxy_post_master_init(
-                    _id, uid, self.opts, self.proxy, self.utils
-                )
-            except Exception as exc:  # pylint: disable=broad-except
-                log.error(
-                    "An exception occured during initialization for %s, skipping: %s",
-                    _id,
-                    exc,
-                )
-                _failed.append(_id)
-                continue
-            minion_id = sub_proxy_data["proxy_opts"].get("id")
+        for minion_id in ids:
+            await _try_subproxy(self, init_subproxy, minion_id)
 
-            if sub_proxy_data["proxy_minion"]:
-                self.deltaproxy_opts[minion_id] = sub_proxy_data["proxy_opts"]
-                self.deltaproxy_objs[minion_id] = sub_proxy_data["proxy_minion"]
-
-                if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
-                    attach_req_channel(
-                        self.deltaproxy_objs[minion_id],
-                        sub_proxy_data["proxy_opts"],
-                        self.io_loop,
-                    )
-
-    if _failed:
-        log.error("The following sub proxies failed to initialize: %s", _failed)
+    pending = [minion_id for minion_id in ids if minion_id not in self.deltaproxy_objs]
+    if pending:
+        log.error("The following sub proxies failed to initialize: %s", pending)
     if self.opts.get("transport", "zeromq") == "zeromq" and self.opts.get(
         "zmq_filtering"
     ):
         self.pub_channel.transport.add_subscriptions(list(self.deltaproxy_objs))
     self.ready = True
+    if pending:
+        retry_interval = max(1, self.opts["proxy"].get("startup_retry_interval", 30))
+        self._subproxy_startup_task = self._spawn_background(
+            _retry_subproxies(self, init_subproxy, pending, retry_interval)
+        )
+
+
+def _register_subproxy(self, result, *, late=False):
+    child = result["proxy_minion"]
+    if child is None:
+        return False
+    proxy_opts = result["proxy_opts"]
+    minion_id = proxy_opts["id"]
+    try:
+        attach_req_channel(child, proxy_opts, self.io_loop)
+        if late:
+            subproxy_tune_in(child)
+            if self.opts.get("transport", "zeromq") == "zeromq" and self.opts.get(
+                "zmq_filtering"
+            ):
+                self.pub_channel.transport.add_subscriptions([minion_id])
+    except Exception:  # pylint: disable=broad-except
+        log.exception("Unable to register sub proxy %s", minion_id)
+        _discard_subproxy(child)
+        return False
+    self.deltaproxy_opts[minion_id] = proxy_opts
+    self.deltaproxy_objs[minion_id] = child
+    return True
+
+
+def _discard_subproxy(child):
+    try:
+        proxy = getattr(child, "proxy", None)
+        if proxy is not None:
+            shutdown = proxy.get(f"{child.opts['proxy']['proxytype']}.shutdown")
+            if shutdown is not None:
+                shutdown(child.opts)
+    except Exception:  # pylint: disable=broad-except
+        log.warning("Unable to shut down sub proxy %s", child.opts["id"], exc_info=True)
+    try:
+        child.destroy()
+    except Exception:  # pylint: disable=broad-except
+        log.warning("Unable to tear down sub proxy %s", child.opts["id"], exc_info=True)
+
+
+async def _try_subproxy(self, init_subproxy, minion_id, *, late=False):
+    try:
+        result = await init_subproxy(minion_id)
+    except Exception as exc:  # pylint: disable=broad-except
+        log.error(
+            "An exception occured during initialization for %s, skipping: %s",
+            minion_id,
+            exc,
+        )
+        return False
+    return _register_subproxy(self, result, late=late)
+
+
+async def _retry_subproxies(self, init_subproxy, pending, interval):
+    while pending:
+        await asyncio.sleep(interval)
+        still_pending = []
+        for minion_id in pending:
+            if await _try_subproxy(self, init_subproxy, minion_id, late=True):
+                log.info("Sub proxy %s started after retry", minion_id)
+            else:
+                still_pending.append(minion_id)
+        pending = still_pending
 
 
 async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
@@ -491,9 +522,6 @@ async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils
     This is primarily loading modules, pillars, etc. (since they need
     to know which master they connected to) for the sub proxy minions.
     """
-
-    proxy_grains = {}
-    proxy_pillar = {}
 
     proxyopts = opts.copy()
     proxyopts["id"] = minion_id
@@ -510,14 +538,36 @@ async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils
     proxy_grains = salt.loader.grains(
         proxyopts, proxy=main_proxy, context=proxy_context
     )
-    proxy_pillar = await salt.pillar.get_async_pillar(
-        proxyopts,
-        proxy_grains,
-        minion_id,
-        saltenv=proxyopts["saltenv"],
-        pillarenv=proxyopts.get("pillarenv"),
-        snapshot=True,
-    ).compile_pillar()
+    # Limit sign-in attempts for startup pillar only. An accepted child keeps
+    # its ordinary authentication policy once it has started.
+    auth_retries = proxyopts.get("auth_retries", 0)  # 0 means retry indefinitely.
+    startup_retries = max(1, opts["proxy"].get("startup_auth_retries", 3))
+    proxyopts["auth_retries"] = (
+        min(auth_retries, startup_retries) if auth_retries > 0 else startup_retries
+    )
+    pillar_timeout = max(1, opts["proxy"].get("startup_pillar_timeout", 30))
+    try:
+        pillar = salt.pillar.get_async_pillar(
+            proxyopts,
+            proxy_grains,
+            minion_id,
+            saltenv=proxyopts["saltenv"],
+            pillarenv=proxyopts.get("pillarenv"),
+            snapshot=True,
+        )
+        try:
+            proxy_pillar = await asyncio.wait_for(
+                pillar.compile_pillar(), timeout=pillar_timeout
+            )
+        # Older Python versions raise asyncio's separate TimeoutError class.
+        except asyncio.TimeoutError as exc:  # noqa: UP041
+            raise SaltInvocationError(
+                f"Startup pillar request for {minion_id} timed out after {pillar_timeout}s"
+            ) from exc
+        finally:
+            await pillar.aclose()
+    finally:
+        proxyopts["auth_retries"] = auth_retries
 
     proxyopts["proxy"] = proxy_pillar.get("proxy", {})
     if not proxyopts["proxy"]:
@@ -546,8 +596,20 @@ async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils
         proxyopts,
         loaded_base_name=f"{minion_id}.{salt.loader.lazy.LOADED_BASE_NAME}",
     )
-    _proxy_minion.proc_dir = salt.minion.get_proc_dir(proxyopts["cachedir"], uid=uid)
+    try:
+        _proxy_minion.proc_dir = salt.minion.get_proc_dir(
+            proxyopts["cachedir"], uid=uid
+        )
+        _configure_subproxy(
+            _proxy_minion, proxyopts, proxy_context, main_utils, opts["saltenv"]
+        )
+    except Exception:
+        _discard_subproxy(_proxy_minion)
+        raise
+    return {"proxy_minion": _proxy_minion, "proxy_opts": proxyopts}
 
+
+def _configure_subproxy(_proxy_minion, proxyopts, proxy_context, main_utils, saltenv):
     # And load the modules
     (
         _proxy_minion.functions,
@@ -563,7 +625,7 @@ async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils
     # we can then sync any proxymodules down from the master
     # we do a sync_all here in case proxy code was installed by
     # SPM or was manually placed in /srv/salt/_modules etc.
-    _proxy_minion.functions["saltutil.sync_all"](saltenv=opts["saltenv"])
+    _proxy_minion.functions["saltutil.sync_all"](saltenv=saltenv)
 
     # And re-load the modules so the __proxy__ variable gets injected
     (
@@ -618,17 +680,7 @@ async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils
         f"{_fq_proxyname}.module_executors", lambda: []
     )()
 
-    proxy_init_fn = _proxy_minion.proxy[_fq_proxyname + ".init"]
-    try:
-        proxy_init_fn(proxyopts)
-    except Exception as exc:  # pylint: disable=broad-except
-        log.error(
-            "An exception occured during the initialization of minion %s: %s",
-            minion_id,
-            exc,
-            exc_info=True,
-        )
-        return {"proxy_minion": None, "proxy_opts": {}}
+    _proxy_minion.proxy[_fq_proxyname + ".init"](proxyopts)
 
     # Reload the grains
     proxy_grains = salt.loader.grains(
@@ -687,8 +739,6 @@ async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils
         _proxy_minion.schedule.delete_job(
             "__proxy_keepalive", persist=True, fire_event=False
         )
-
-    return {"proxy_minion": _proxy_minion, "proxy_opts": proxyopts}
 
 
 def target(cls, minion_instance, opts, data, connected, creds_map):
@@ -1299,6 +1349,6 @@ def subproxy_tune_in(proxy_minion, start=True):
     # cleanup.  Hand the registration to the sub-proxy's own io_loop -- the
     # loop that is actually run -- via the thread-safe
     # ``call_soon_threadsafe``, so the timers bind to that loop instead.
-    proxy_minion.io_loop.call_soon_threadsafe(_start_periodics)
     proxy_minion._state_run()
+    proxy_minion.io_loop.call_soon_threadsafe(_start_periodics)
     return proxy_minion
