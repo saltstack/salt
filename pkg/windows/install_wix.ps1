@@ -111,12 +111,23 @@ if ( (ProductcodeExists $guid_64) -or (ProductcodeExists $guid_32) ) {
     }
 
     Write-Host "Cleaning up: " -NoNewline
-    Remove-Item -Path $file -Force
-    if ( ! (Test-Path -Path "$file") ) {
+    # Windows can briefly deny access to the installer after it exits.
+    for ( $attempt = 1; $attempt -le 3; $attempt++ ) {
+        try {
+            if ( Test-Path -LiteralPath $file ) {
+                Remove-Item -LiteralPath $file -Force -ErrorAction Stop
+            }
+        } catch {
+            if ( $attempt -eq 3 ) {
+                Write-Result "Skipped" -ForegroundColor Yellow
+                Write-Warning "Could not remove the WiX installer '$file': $($_.Exception.Message)"
+            } else {
+                Start-Sleep -Seconds 1
+            }
+            continue
+        }
         Write-Result "Success" -ForegroundColor Green
-    } else {
-        # Not a hard fail
-        Write-Result "Failed" -ForegroundColor Yellow
+        break
     }
 }
 
