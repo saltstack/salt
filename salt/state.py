@@ -3353,6 +3353,10 @@ class State:
             else:
                 running[tag] = self.call(low, chunks, running)
         if tag in running:
+            # force_mod_watch only tells the requisite handling above whether to
+            # run mod_watch, so it is not part of the result on any path,
+            # including a result of mod_watch itself.
+            running[tag].pop("force_mod_watch", None)
             self.event(
                 running[tag], len(chunks), fire_event=low.get("fire_event", False)
             )

@@ -641,6 +641,10 @@ def low(data, queue=None, **kwargs):
     ret = st_.call(data)
     if isinstance(ret, list):
         __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
+    elif isinstance(ret, dict):
+        # A single state runs without requisites, so force_mod_watch has no
+        # effect and is not part of the result.
+        ret.pop("force_mod_watch", None)
     if not __utils__["state.check_result"](ret):
         __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_FAILURE
     return ret
@@ -2614,11 +2618,12 @@ def single(fun, name, test=None, queue=None, **kwargs):
 
     st_._mod_init(kwargs)
     snapper_pre = _snapper_pre(opts, kwargs.get("__pub_jid", "called localy"))
-    ret = {
-        "{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}".format(kwargs): st_.call(
-            kwargs
-        )
-    }
+    state_ret = st_.call(kwargs)
+    if isinstance(state_ret, dict):
+        # A single state runs without requisites, so force_mod_watch has no
+        # effect and is not part of the result.
+        state_ret.pop("force_mod_watch", None)
+    ret = {"{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}".format(kwargs): state_ret}
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
