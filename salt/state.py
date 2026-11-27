@@ -3313,9 +3313,15 @@ class State:
                             ret["comment"] = existing_comment + "\n" + mod_comment
                         else:
                             ret["comment"] = mod_comment
-                    ret["result"] = bool(ret.get("result")) and bool(
-                        mod_ret.get("result", True)
-                    )
+                    # A result of None means that the state would make changes in
+                    # test mode, so it is kept unless either run failed.
+                    results = (ret.get("result"), mod_ret.get("result", True))
+                    if any(result is False for result in results):
+                        ret["result"] = False
+                    elif any(result is None for result in results):
+                        ret["result"] = None
+                    else:
+                        ret["result"] = True
             running[tag] = ret
         elif status == "pre":
             self._assign_not_run_result_dict(
@@ -3347,6 +3353,10 @@ class State:
             else:
                 running[tag] = self.call(low, chunks, running)
         if tag in running:
+            # force_mod_watch only tells the requisite handling above whether to
+            # run mod_watch, so it is not part of the result on any path,
+            # including a result of mod_watch itself.
+            running[tag].pop("force_mod_watch", None)
             self.event(
                 running[tag], len(chunks), fire_event=low.get("fire_event", False)
             )
