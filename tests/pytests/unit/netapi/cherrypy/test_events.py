@@ -21,6 +21,11 @@ class MockCherryPy:
     serving = SimpleNamespace(session=MagicMock(cache={}))
     config = {"saltopts": {}}
     HTTPError = _MockHTTPError
+    # ``Events._is_valid_token`` reads ``cherrypy.request.headers`` to honor
+    # the ``X-Forwarded-User`` / ``X-Forwarded-Eauth`` header-credential
+    # feature. An empty header dict means neither header is set, so the
+    # original "token only" semantics these tests exercise are preserved.
+    request = SimpleNamespace(headers={})
 
 
 class MockResolver:
