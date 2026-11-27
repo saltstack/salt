@@ -107,10 +107,15 @@ class SubproxyLogFileHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler):
         path = self.paths.get(getattr(record, "subproxy_id", None))
         if path is not None:
             try:
+                # Salt initializes logging before importing its file utilities.
+                import salt.utils.files
+
                 # Children are numerous and their job workers can fork.
                 # Opening on each write avoids retaining one FD per child
                 # and follows externally rotated files.
-                with open(path, "a", encoding="utf-8", opener=self._open) as stream:
+                with salt.utils.files.fopen(
+                    path, "a", encoding="utf-8", opener=self._open
+                ) as stream:
                     stream.write(self.format(record) + "\n")
                 return
             except OSError:

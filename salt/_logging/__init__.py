@@ -35,9 +35,6 @@ from salt._logging.impl import (
     is_extended_logging_configured,
     is_logfile_handler_configured,
     is_temp_handler_configured,
-)
-from salt._logging.impl import register_subproxy_log_file as register_subproxy_log_file
-from salt._logging.impl import (
     set_log_record_factory,
     set_logging_options_dict,
     set_lowest_log_level,

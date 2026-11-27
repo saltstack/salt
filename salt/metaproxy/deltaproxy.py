@@ -14,7 +14,6 @@ import traceback
 import types
 
 import salt
-import salt._logging
 import salt.beacons
 import salt.cli.daemons
 import salt.client
@@ -47,6 +46,7 @@ import salt.utils.schedule
 import salt.utils.ssdp
 import salt.utils.user
 import salt.utils.zeromq
+from salt._logging.impl import register_subproxy_log_file
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import (
     CommandExecutionError,
@@ -544,9 +544,7 @@ async def _initialize_subproxy(minion_id, uid, opts, main_proxy, main_utils):
         proxyopts["proxy"] = proxyopts["proxy"].copy()
         log_file = proxyopts["proxy"].pop("log_file")
         if log_file is not None:
-            salt._logging.register_subproxy_log_file(
-                minion_id, log_file, opts.get("user")
-            )
+            register_subproxy_log_file(minion_id, log_file, opts.get("user"))
 
     proxyopts.update(
         {
