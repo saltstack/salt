@@ -2,6 +2,7 @@
 
 import time
 from pathlib import Path
+from textwrap import dedent
 
 import pytest
 
@@ -50,11 +51,50 @@ def salt_delta_proxy_factory(salt_delta_proxy_factory, salt_master_factory):
     )
 
 
+@pytest.fixture(scope="module")
+def execution_marker_module(salt_master, salt_delta_proxy, salt_cli, tmp_path_factory):
+    """Make sure every child can record its own execution before testing targeting."""
+    children = pytest.helpers.proxy.delta_proxy_minion_ids()
+    child_target = ",".join(children)
+    module = """
+    from pathlib import Path
+
+    __proxyenabled__ = ["*"]
+
+    def mark(directory):
+        child_id = __opts__["id"]
+        (Path(directory) / child_id).touch()
+        return child_id
+    """
+    with salt_master.state_tree.base.temp_file(
+        "_modules/deltaproxy_execution_marker.py", dedent(module)
+    ):
+        ret = salt_cli.run(
+            "-L", "saltutil.sync_modules", saltenv="base", minion_tgt=child_target
+        )
+        assert ret.returncode == 0, ret
+        ready_dir = tmp_path_factory.mktemp("deltaproxy-markers")
+        ret = salt_cli.run(
+            "-L",
+            "deltaproxy_execution_marker.mark",
+            str(ready_dir),
+            minion_tgt=child_target,
+        )
+        assert ret.returncode == 0, ret
+        assert ret.data == {child_id: child_id for child_id in children}, ret
+        assert {path.name for path in ready_dir.iterdir()} == set(children)
+        yield
+
+
 @pytest.mark.parametrize("target_type", ["id", "glob", "list", "pcre", "compound"])
-def test_child_publication(salt_delta_proxy, salt_cli, tmp_path, target_type):
+def test_child_publication(
+    salt_delta_proxy, salt_cli, tmp_path, target_type, execution_marker_module
+):
     """Check execution independently of the child's return channel (#70711)."""
     child_id = pytest.helpers.proxy.delta_proxy_minion_ids()[0]
-    marker = tmp_path / "executed"
+    marker_dir = tmp_path / "executed"
+    marker_dir.mkdir()
+    marker = marker_dir / child_id
     targets = {
         "id": ([], child_id),
         "glob": ([], "dummy_proxy_o*"),
@@ -69,7 +109,11 @@ def test_child_publication(salt_delta_proxy, salt_cli, tmp_path, target_type):
     assert ret.data is True
 
     ret = salt_cli.run(
-        "--async", *arguments, "file.touch", str(marker), minion_tgt=target
+        "--async",
+        *arguments,
+        "deltaproxy_execution_marker.mark",
+        str(marker_dir),
+        minion_tgt=target,
     )
     assert ret.returncode == 0
     deadline = time.monotonic() + 15
@@ -81,6 +125,7 @@ def test_child_publication(salt_delta_proxy, salt_cli, tmp_path, target_type):
     assert ret.returncode == 0
     data = ret.data if isinstance(ret.data, dict) else {child_id: ret.data}
     assert data == {child_id: True}
+    assert {path.name for path in marker_dir.iterdir()} == {child_id}
 
 
 def test_multiple_children(salt_delta_proxy, salt_cli):
