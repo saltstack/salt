@@ -1360,6 +1360,8 @@ def test_mod_repo_match():
             MagicMock(return_value=mock_source_list),
             create=True,
         ), patch(
+            "salt.utils.path.which", MagicMock(return_value="/usr/bin/apt-key")
+        ), patch(
             "salt.modules.aptpkg._split_repo_str",
             MagicMock(
                 return_value={
