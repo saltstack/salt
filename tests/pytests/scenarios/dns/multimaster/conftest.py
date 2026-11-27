@@ -66,7 +66,7 @@ def salt_mm_master_1(request, salt_factories):
 
 @pytest.fixture(scope="package")
 def mm_master_1_salt_cli(salt_mm_master_1):
-    return salt_mm_master_1.salt_cli(timeout=180)
+    return salt_mm_master_1.salt_cli(timeout=10)
 
 
 @pytest.fixture(scope="package")
@@ -139,7 +139,7 @@ def salt_mm_master_2(salt_factories, salt_mm_master_1):
 
 @pytest.fixture(scope="package")
 def mm_master_2_salt_cli(salt_mm_master_2):
-    return salt_mm_master_2.salt_cli(timeout=180)
+    return salt_mm_master_2.salt_cli(timeout=10)
 
 
 @pytest.fixture(scope="package")
@@ -150,6 +150,7 @@ def salt_mm_minion_1(salt_mm_master_1, salt_mm_master_2, master_alive_interval):
 
     mm_master_1_port = salt_mm_master_1.config["ret_port"]
     mm_master_2_port = salt_mm_master_2.config["ret_port"]
+    # Leave publish_port at its default so each master can advertise its own.
     config_overrides = {
         "worker_pools_enabled": True,
         "worker_pools": {
@@ -175,8 +176,11 @@ def salt_mm_minion_1(salt_mm_master_1, salt_mm_master_2, master_alive_interval):
             f"master1.local:{mm_master_1_port}",
             f"master2.local:{mm_master_2_port}",
         ],
-        "publish_port": salt_mm_master_1.config["publish_port"],
         "master_alive_interval": master_alive_interval,
+        # Bound how long a socket can remain open after the old IP is removed.
+        "tcp_keepalive_idle": 2,
+        "tcp_keepalive_intvl": 1,
+        "tcp_keepalive_cnt": 2,
         "master_tries": -1,
         "verify_master_pubkey_sign": True,
         "retry_dns": 10,
