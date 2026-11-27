@@ -31,7 +31,7 @@ import tornado.ioloop
 
 import salt.metaproxy.deltaproxy as deltaproxy
 import salt.modules.saltutil
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import AsyncMock, MagicMock, patch
 
 log = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ def patched_subproxy_post_master_init(sub_proxy_opts):
     # ``compile_pillar()`` returns a resolved Future so the yield resolves
     # to the proxy-config dict.
     def _fake_pillar(opts, grains, minion_id, **kwargs):
-        compiler = MagicMock()
+        compiler = MagicMock(aclose=AsyncMock())
         future = tornado.concurrent.Future()
         future.set_result({"proxy": {"proxytype": "serial_test_proxy"}})
         compiler.compile_pillar.return_value = future
