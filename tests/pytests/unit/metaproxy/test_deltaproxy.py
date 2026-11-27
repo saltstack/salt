@@ -20,7 +20,7 @@ import tornado.ioloop
 import salt.loader.lazy
 import salt.metaproxy.deltaproxy as deltaproxy
 import salt.minion
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import AsyncMock, MagicMock, patch
 
 log = logging.getLogger(__name__)
 
@@ -104,7 +104,7 @@ def test_post_master_init_logs_subproxy_failures(
     attempted = []
     subproxies = {minion_id: MagicMock() for minion_id in ids}
 
-    async def init_subproxy(minion_id, *args):
+    async def init_subproxy(minion_id, **kwargs):
         attempted.append(minion_id)
         if minion_id in failed_ids:
             raise RuntimeError("proxy initialization failed")
@@ -114,6 +114,7 @@ def test_post_master_init_logs_subproxy_failures(
         }
 
     monkeypatch.setattr(deltaproxy, "subproxy_post_master_init", init_subproxy)
+    control._spawn_background.side_effect = lambda coro: coro.close()
     with caplog.at_level(logging.WARNING, logger=deltaproxy.__name__):
         asyncio.run(deltaproxy.post_master_init(control, "master"))
 
@@ -125,6 +126,7 @@ def test_post_master_init_logs_subproxy_failures(
         if minion_id not in failed_ids
     }
     assert attach_channel.call_count == len(ids) - len(failed_ids)
+    assert control._spawn_background.call_count == bool(failed_ids)
     subscriptions = control.pub_channel.transport.add_subscriptions
     if transport == "zeromq" and filtering:
         subscriptions.assert_called_once_with(list(control.deltaproxy_objs))
@@ -161,6 +163,38 @@ def proxy_opts(tmp_path):
     }
 
 
+def test_startup_pillar_timeout_closes_channel(proxy_opts, monkeypatch):
+    proxy_opts["auth_retries"] = 10
+    proxy_opts["proxy"].update(startup_auth_retries=2, startup_pillar_timeout=1)
+    child_opts = {}
+
+    async def compile_pillar():
+        assert child_opts["auth_retries"] == 2
+        await asyncio.Future()
+
+    def get_pillar(opts, *args, **kwargs):
+        nonlocal child_opts
+        child_opts = opts
+        return compiler
+
+    compiler = MagicMock(compile_pillar=compile_pillar, aclose=AsyncMock())
+    monkeypatch.setattr(
+        deltaproxy.salt.config,
+        "proxy_config",
+        lambda *args, defaults, **kwargs: defaults,
+    )
+    monkeypatch.setattr(deltaproxy.salt.loader, "grains", lambda *args, **kwargs: {})
+    monkeypatch.setattr(deltaproxy.salt.pillar, "get_async_pillar", get_pillar)
+
+    with pytest.raises(deltaproxy.SaltInvocationError, match="timed out after 1s"):
+        asyncio.run(
+            deltaproxy.subproxy_post_master_init("minion1", 0, proxy_opts, {}, {})
+        )
+
+    compiler.aclose.assert_awaited_once()
+    assert child_opts["auth_retries"] == proxy_opts["auth_retries"]
+
+
 def _make_subproxy_patches(per_minion_grains):
     """
     Build the patches needed to call ``subproxy_post_master_init`` without
@@ -181,6 +215,7 @@ def _make_subproxy_patches(per_minion_grains):
     # resolves to the proxy-config dict.
     def _fake_pillar(opts, grains, minion_id, **kwargs):
         compiler = MagicMock()
+        compiler.aclose = AsyncMock()
         future = tornado.concurrent.Future()
         future.set_result({"proxy": {"proxytype": "dummy_test_proxy"}})
         compiler.compile_pillar.return_value = future

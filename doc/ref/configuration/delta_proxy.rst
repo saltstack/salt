@@ -346,6 +346,24 @@ To create a control proxy configuration file:
            - my_managed_device_02
            - my_managed_device_03
 
+   During startup, the control proxy gives each child up to three
+   authentication attempts and up to 30 seconds to fetch its startup pillar.
+   The control proxy and successfully initialized children can then take jobs.
+   The controller retries failed children in the background after 30 seconds
+   and waits another 30 seconds between rounds. Once the master accepts a
+   child's key, the child can join on the next successful retry.
+
+   Set positive values under the control proxy's ``proxy`` pillar to adjust
+   these defaults. The time values are in seconds.
+
+   .. code-block:: yaml
+
+       proxy:
+         proxytype: deltaproxy
+         startup_auth_retries: 3
+         startup_pillar_timeout: 30
+         startup_retry_interval: 30
+
 #. Save the file.
 
 #. In an editor, open the top file: ``/srv/pillar/top.sls``.
