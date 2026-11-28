@@ -2,6 +2,7 @@ import time
 
 import pytest
 
+import salt.sqlalchemy.minions
 import salt.utils.data
 import salt.utils.minions
 from tests.support.mock import patch
@@ -44,7 +45,7 @@ def assert_matching_results(ckminions, compound_tgt, direct_tgt, tgt_type):
 def base_ckminions(master_opts, database_backend):
     """Create a base CkMinions instance without any data"""
     instance = salt.utils.minions.CkMinions.factory(master_opts)
-    assert isinstance(instance, salt.utils.minions.SQLAlchemyCkMinions) == (
+    assert isinstance(instance, salt.sqlalchemy.minions.SQLAlchemyCkMinions) == (
         database_backend.name != "no_database"
     )
     return instance
@@ -516,7 +517,7 @@ def test_connected_ids_returns_first_matching_address_per_family(
 def test_large_minion_subset(ckminions):
     grains = {"role": "web", "ipv4": ["192.0.2.10"]}
     ck = ckminions({"target": grains, "outside": grains})
-    if not isinstance(ck, salt.utils.minions.SQLAlchemyCkMinions):
+    if not isinstance(ck, salt.sqlalchemy.minions.SQLAlchemyCkMinions):
         pytest.skip("Exercise database parameter limits without filesystem probes")
     subset = ["target", *(f"missing-{idx}" for idx in range(65_536))]
     result = ck._check_cache_minions("role:web", ":", True, "grains", minions=subset)
@@ -716,7 +717,7 @@ def test_untagged_data_updates_clear_terms(ckminions):
 
 def test_accepted_minions_listed_once_per_request(ckminions):
     ck = ckminions({"web": {"role": "web"}, "db": {"role": "database"}})
-    if not isinstance(ck, salt.utils.minions.SQLAlchemyCkMinions):
+    if not isinstance(ck, salt.sqlalchemy.minions.SQLAlchemyCkMinions):
         pytest.skip("Memoization is part of the SQLAlchemy matcher")
     with patch.object(ck.key, "list_status", wraps=ck.key.list_status) as listed:
         ck.check_minions("G@role:web or G@role:database or web*", "compound")
@@ -748,13 +749,13 @@ class _Broken(Exception):
 @pytest.mark.parametrize(
     "error",
     [
-        salt.utils.minions._TargetingTimeout(),
+        salt.sqlalchemy.minions._TargetingTimeout(),
         sqlalchemy.exc.OperationalError("SELECT", {}, _Canceled()),
     ],
 )
 def test_timed_out_targets_fail_whole_target(ckminions, caplog, error):
     ck = ckminions(TERMS_DATA)
-    if not isinstance(ck, salt.utils.minions.SQLAlchemyCkMinions):
+    if not isinstance(ck, salt.sqlalchemy.minions.SQLAlchemyCkMinions):
         pytest.skip("The time limit is part of the SQLAlchemy matcher")
     with patch.object(ck, "_match_cache", side_effect=error):
         with pytest.raises(salt.utils.minions.TargetingTimeout):
@@ -780,7 +781,7 @@ def test_timed_out_targets_fail_whole_target(ckminions, caplog, error):
 
 def test_other_database_errors_are_raised(ckminions):
     ck = ckminions(TERMS_DATA)
-    if not isinstance(ck, salt.utils.minions.SQLAlchemyCkMinions):
+    if not isinstance(ck, salt.sqlalchemy.minions.SQLAlchemyCkMinions):
         pytest.skip("The time limit is part of the SQLAlchemy matcher")
     error = sqlalchemy.exc.OperationalError("SELECT", {}, _Broken())
     with patch.object(ck, "_match_cache", side_effect=error):

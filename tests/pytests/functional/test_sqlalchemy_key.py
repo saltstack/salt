@@ -4,6 +4,7 @@ import pytest
 
 import salt.crypt
 import salt.key
+import salt.sqlalchemy.key
 import salt.utils.crypt
 from tests.support.pytest.database import (
     available_databases,
@@ -37,7 +38,7 @@ pytestmark = [
 def base_key(master_opts, database_backend):
     """Create a base CkMinions instance without any data"""
     instance = salt.key.get_key(master_opts)
-    assert isinstance(instance, salt.key.SqlAlchemyKey) == (
+    assert isinstance(instance, salt.sqlalchemy.key.SqlAlchemyKey) == (
         database_backend.name != "no_database"
     )
     return instance
@@ -908,7 +909,10 @@ def test_glob_match_includes_local_keys(key, monkeypatch):
     monkeypatch.setattr(
         k, "local_keys", lambda: {"local": ["master.pub", "master.pem"]}
     )
-    if isinstance(k, salt.key.SqlAlchemyKey) and os.path.normcase("A") == "A":
+    if (
+        isinstance(k, salt.sqlalchemy.key.SqlAlchemyKey)
+        and os.path.normcase("A") == "A"
+    ):
         fnmatchcase = salt.key.fnmatch.fnmatchcase
 
         def local_match(name, pattern):
@@ -932,7 +936,7 @@ def test_list_keys_uses_case_insensitive_display_order(key):
 @pytest.mark.parametrize("state", [None, "unknown"])
 def test_sqlalchemy_key_skips_invalid_states(key, state, caplog):
     k = key()
-    if not isinstance(k, salt.key.SqlAlchemyKey):
+    if not isinstance(k, salt.sqlalchemy.key.SqlAlchemyKey):
         pytest.skip("Exercise malformed database metadata directly")
     k.cache.store("keys", "good", {"state": "accepted", "pub": ""})
     k.cache.store("keys", "bad", {"state": state, "pub": ""})
@@ -943,7 +947,7 @@ def test_sqlalchemy_key_skips_invalid_states(key, state, caplog):
 
 def test_sqlalchemy_key_queries_exclude_expired_rows(key):
     k = key({"live": {"state": "accepted", "pub": ""}})
-    if not isinstance(k, salt.key.SqlAlchemyKey):
+    if not isinstance(k, salt.sqlalchemy.key.SqlAlchemyKey):
         pytest.skip("The local key cache does not support expiry")
     k.cache.store("keys", "expired", {"state": "accepted", "pub": ""}, expires=-1)
     k.cache.store("denied_keys", "expired-denied", ["public key"], expires=-1)
@@ -955,7 +959,7 @@ def test_sqlalchemy_key_queries_exclude_expired_rows(key):
 
 def test_sqlalchemy_key_large_list_match(key, monkeypatch):
     k = key({name: {"state": "accepted", "pub": ""} for name in ("target", "outside")})
-    if not isinstance(k, salt.key.SqlAlchemyKey):
+    if not isinstance(k, salt.sqlalchemy.key.SqlAlchemyKey):
         pytest.skip("Exercise database parameter limits without filesystem probes")
     key_rows = k._key_rows
 
@@ -980,7 +984,7 @@ def test_sqlalchemy_key_large_glob_match(key, monkeypatch):
             for name in ("target", "Target", "outside")
         }
     )
-    if not isinstance(k, salt.key.SqlAlchemyKey):
+    if not isinstance(k, salt.sqlalchemy.key.SqlAlchemyKey):
         pytest.skip("Exercise database parameter limits without filesystem probes")
     patterns = ["tar*", "targ??", *(f"missing-{idx}*" for idx in range(1001))]
     expected = salt.key.Key.glob_match(k, patterns)
@@ -1029,7 +1033,7 @@ def test_sqlalchemy_key_large_glob_match(key, monkeypatch):
 )
 def test_sqlalchemy_key_glob_filters_in_database(key, monkeypatch, pattern):
     k = key()
-    if not isinstance(k, salt.key.SqlAlchemyKey):
+    if not isinstance(k, salt.sqlalchemy.key.SqlAlchemyKey):
         pytest.skip("Exercise complete database glob predicates")
     if os.path.normcase("A") != "A":
         pytest.skip("Windows glob normalization uses the base matcher")
@@ -1063,7 +1067,7 @@ def test_sqlalchemy_key_glob_filters_in_database(key, monkeypatch, pattern):
 def test_sqlalchemy_key_sort_breaks_case_ties(key):
     names = ["web1", "Web1", "WEB1"]
     k = key({name: {"state": "accepted", "pub": ""} for name in names})
-    if not isinstance(k, salt.key.SqlAlchemyKey):
+    if not isinstance(k, salt.sqlalchemy.key.SqlAlchemyKey):
         pytest.skip("Exercise deterministic ordering in the database key backend")
     expected = ["WEB1", "Web1", "web1"]
     assert k.list_keys()[k.ACC] == expected
