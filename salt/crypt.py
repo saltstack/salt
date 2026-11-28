@@ -1813,6 +1813,7 @@ class AsyncAuth:
         :return: Payload dictionary
         :rtype: dict
         """
+        self._discard_unpinned_master_key()
         payload = {}
         payload["cmd"] = "_auth"
         payload["id"] = self.opts["id"]
@@ -2111,6 +2112,26 @@ class AsyncAuth:
                     return ""
             else:
                 if not m_pub_exists:
+                    # Check a pinned fingerprint before the key is stored, so
+                    # that a master that fails the pin leaves nothing behind.
+                    finger = self._pinned_master_finger()
+                    if finger:
+                        offered = salt.utils.crypt.pem_finger(
+                            key=payload_pub_key, sum_type=self.opts["hash_type"]
+                        )
+                        if offered != finger:
+                            log.critical(
+                                "The specified fingerprint in the master "
+                                "configuration file:\n%s\nDoes not match the "
+                                "authenticating master's key:\n%s\nThe key was "
+                                "not stored. Verify that the configured "
+                                "fingerprint matches the fingerprint of the "
+                                "correct master and that this minion is not "
+                                "subject to a man-in-the-middle attack.",
+                                finger,
+                                offered,
+                            )
+                            sys.exit(42)
                     # the minion has not received any masters pubkey yet, write
                     # the newly received pubkey to minion_master.pub. Store
                     # the clean_key'd form so that subsequent restarts compare
@@ -2118,6 +2139,43 @@ class AsyncAuth:
                     with salt.utils.files.fopen(m_pub_fn, "wb+") as fp_:
                         fp_.write(salt.utils.stringutils.to_bytes(payload_pub_key))
                 return self.extract_aes(payload, master_pub=False)
+
+    def _pinned_master_finger(self):
+        """
+        The fingerprint handle_signin_response checks the master key against,
+        or None when no fingerprint is configured.
+        """
+        if self.opts.get("syndic_master", False):
+            finger = self.opts.get(
+                "syndic_finger", self.opts.get("master_finger", False)
+            )
+        else:
+            finger = self.opts.get("master_finger", False)
+        return finger or None
+
+    def _discard_unpinned_master_key(self):
+        """
+        Remove a stored master key that does not match the pinned fingerprint.
+
+        Such a key can only be a master the minion must not trust. Kept, it
+        stops the minion signing in to the pinned master: the sign-in token is
+        encrypted to it and the pinned master's key is refused as changed. A
+        stored key that matches the pin is never removed.
+        """
+        finger = self._pinned_master_finger()
+        m_pub_fn = os.path.join(self.opts["pki_dir"], self.mpub)
+        if not finger or not os.path.isfile(m_pub_fn):
+            return
+        stored = salt.utils.crypt.pem_finger(m_pub_fn, sum_type=self.opts["hash_type"])
+        if stored != finger:
+            log.warning(
+                "The stored master key %s has fingerprint %s, which does not "
+                "match the configured fingerprint %s; removing it",
+                m_pub_fn,
+                stored,
+                finger,
+            )
+            os.remove(m_pub_fn)
 
     def _finger_fail(self, finger, master_key):
         log.critical(
