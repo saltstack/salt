@@ -57,7 +57,7 @@ def test_run_chunked_remote_path_resolution():
     ck_minions.check_minions.return_value = {"minions": ["minion1"]}
 
     with patch.object(cp_client, "_list_files", return_value=(files, empty_dirs)):
-        with patch("salt.utils.minions.CkMinions", return_value=ck_minions):
+        with patch("salt.utils.minions.CkMinions.factory", return_value=ck_minions):
             with patch("salt.utils.itertools.read_file", return_value=["chunk-data"]):
                 with patch("salt.client.get_local_client", return_value=local):
                     ret = cp_client.run_chunked()
@@ -93,7 +93,7 @@ def test_run_chunked_remote_path_single_file_dest_not_dir():
     with patch.object(
         cp_client, "_list_files", return_value=({explicit_file: 0o644}, [])
     ):
-        with patch("salt.utils.minions.CkMinions", return_value=ck_minions):
+        with patch("salt.utils.minions.CkMinions.factory", return_value=ck_minions):
             with patch("salt.utils.itertools.read_file", return_value=["chunk-data"]):
                 with patch("salt.client.get_local_client", return_value=local):
                     ret = cp_client.run_chunked()
@@ -120,7 +120,7 @@ def test_run_chunked_remote_path_unmatched_logs_error(caplog):
 
     with caplog.at_level(logging.ERROR, logger="salt.cli.cp"):
         with patch.object(cp_client, "_list_files", return_value=({}, [unmatched_dir])):
-            with patch("salt.utils.minions.CkMinions", return_value=ck_minions):
+            with patch("salt.utils.minions.CkMinions.factory", return_value=ck_minions):
                 with patch("salt.client.get_local_client", return_value=local):
                     ret = cp_client.run_chunked()
 

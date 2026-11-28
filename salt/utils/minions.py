@@ -9,18 +9,19 @@ import re
 import time
 
 import salt.cache
+import salt.exceptions
 import salt.payload
 import salt.roster
 import salt.transport
+import salt.utils.args
 import salt.utils.data
-import salt.utils.files
 import salt.utils.grain_target_cache
+import salt.utils.metrics
 import salt.utils.mmap_trie_index
 import salt.utils.network
 import salt.utils.resource_registry
 import salt.utils.resources
 import salt.utils.stringutils
-import salt.utils.versions
 from salt._compat import ipaddress
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError, SaltCacheError
@@ -614,6 +615,18 @@ class CkMinions:
         """
         return salt.utils.resource_registry.get_registry(self.opts)
 
+    @staticmethod
+    def factory(opts):
+        # Cache matching falls back to the base implementation by dialect.
+        if opts.get("minion_data_cache") and opts.get("cache") == "sqlalchemy":
+            # Imported here so masters using other drivers never load
+            # SQLAlchemy.
+            import salt.sqlalchemy.minions  # pylint: disable=import-outside-toplevel
+
+            return salt.sqlalchemy.minions.SQLAlchemyCkMinions(opts)
+        else:
+            return CkMinions(opts)
+
     def _check_nodegroup_minions(self, expr, greedy):  # pylint: disable=unused-argument
         """
         Return minions found by looking at nodegroups
@@ -623,7 +636,10 @@ class CkMinions:
         )
 
     def _check_glob_minions(
-        self, expr, greedy, minions=None
+        self,
+        expr,
+        greedy,
+        minions=None,
     ):  # pylint: disable=unused-argument
         """
         Return the minions found by looking via globs
@@ -660,7 +676,11 @@ class CkMinions:
         return {"minions": result_minions, "missing": []}
 
     def _check_list_minions(
-        self, expr, greedy, ignore_missing=False, minions=None
+        self,
+        expr,
+        greedy,
+        ignore_missing=False,
+        minions=None,
     ):  # pylint: disable=unused-argument
         """
         Return the minions found by looking via a list
@@ -713,12 +733,24 @@ class CkMinions:
         return {"minions": matched + extra, "missing": missing}
 
     def _check_pcre_minions(
-        self, expr, greedy, minions=None
+        self,
+        expr,
+        greedy,
+        minions=None,
     ):  # pylint: disable=unused-argument
         """
         Return the minions found by looking via regular expressions
         """
-        reg = re.compile(expr)
+        try:
+            reg = re.compile(expr)
+        except re.error as exc:
+            log.error(
+                f"Something went wrong compiling expression to pcre '{expr}': {exc}"
+            )
+            return {
+                "minions": [],
+                "missing": [],
+            }
 
         if not minions:
             minions = self._pki_minions()
@@ -774,10 +806,13 @@ class CkMinions:
         have a cache entry are considered.
         """
         cache_enabled = self.opts.get("minion_data_cache", False)
+        if search_type.startswith("pillar"):
+            bank = "pillar"
+        else:
+            bank = "grains"
 
         def list_cached_minions():
-            # we use grains as a equivalent for minion list
-            return self.cache.list("grains")
+            return self.cache.list(bank)
 
         if greedy:
             if not minions:
@@ -840,7 +875,7 @@ class CkMinions:
                 if id_ not in minions:
                     continue
                 evaluated.add(id_)
-                mdata = self.cache.fetch(search_type, id_)
+                mdata = self.cache.fetch(bank, id_)
                 if mdata is None:
                     minions.discard(id_)
                     continue
@@ -1202,6 +1237,16 @@ class CkMinions:
 
             return _deferred_minions_scope["minions"]
 
+        # Operand sets are passed to eval as variables. Writing them into the
+        # expression as set literals made Python parse every minion id again,
+        # over a second and 170 MiB for two 100,000-minion operands.
+        operands = {}
+
+        def operand(matched):
+            name = f"_m{len(operands)}"
+            operands[name] = set(matched)
+            return name
+
         log.debug("expr: %s, delimiter: %s, minions: %s", expr, delimiter, minions)
 
         nodegroups = self.opts.get("nodegroups", {})
@@ -1329,7 +1374,7 @@ class CkMinions:
                     if target_info["engine"] == "T":
                         engine_kwargs["fun"] = fun
                     _results = engine(*engine_args, **engine_kwargs)
-                    results.append(str(set(_results["minions"])))
+                    results.append(operand(_results["minions"]))
                     missing.extend(_results["missing"])
                     if unmatched and unmatched[-1] == "-":
                         results.append(")")
@@ -1337,7 +1382,7 @@ class CkMinions:
 
                 else:
                     _results = self._check_glob_minions(word, True, minions=minions)
-                    results.append(str(set(_results["minions"])))
+                    results.append(operand(_results["minions"]))
                     if unmatched and unmatched[-1] == "-":
                         results.append(")")
                         unmatched.pop()
@@ -1354,6 +1399,7 @@ class CkMinions:
                         {
                             "all_minions": _deferred_minions,
                             "_deferred_minions_scope": _deferred_minions_scope,
+                            **operands,
                         },
                     )
                 )  # pylint: disable=W0123
@@ -1363,6 +1409,27 @@ class CkMinions:
                 return {"minions": [], "missing": []}
 
         return {"minions": list(minions), "missing": []}
+
+    def _iter_minion_grains_addresses(self, subset=None):
+        """Yield (minion_id, address_family, address) tuples from cached grains."""
+        search = subset or self.cache.list("grains")
+        if search is None:
+            return
+
+        for id_ in search:
+            try:
+                grains = self.cache.fetch("grains", id_)
+            except SaltCacheError:
+                # If a SaltCacheError is explicitly raised during the fetch operation,
+                # permission was denied to open the cached data.p file. Continue on as
+                # in the releases <= 2016.3. (An explicit error raise was added in PR
+                # #35388. See issue #36867 for more information.
+                continue
+            if grains is None:
+                continue
+            for family in ("ipv4", "ipv6"):
+                for address in grains.get(family, []):
+                    yield (id_, family, address)
 
     def connected_ids(self, subset=None, show_ip=False):
         """
@@ -1420,9 +1487,6 @@ class CkMinions:
         """
         minions = set()
         if self.opts.get("minion_data_cache", False):
-            search = self.cache.list("grains")
-            if search is None:
-                return minions
             addrs = salt.utils.network.local_port_tcp(int(self.opts["publish_port"]))
             if self.opts.get("detect_remote_minions", False):
                 addrs = addrs.union(
@@ -1436,33 +1500,18 @@ class CkMinions:
                 # Add in the address of a possible locally-connected minion.
                 addrs.discard("::1")
                 addrs.update(set(salt.utils.network.ip_addrs6(include_loopback=False)))
-            if subset:
-                search = subset
-            for id_ in search:
-                try:
-                    grains = self.cache.fetch("grains", id_)
-                except SaltCacheError:
-                    # If a SaltCacheError is explicitly raised during the fetch operation,
-                    # permission was denied to open the cached data.p file. Continue on as
-                    # in the releases <= 2016.3. (An explicit error raise was added in PR
-                    # #35388. See issue #36867 for more information.
-                    continue
-                if grains is None:
-                    continue
-                for ipv4 in grains.get("ipv4", []):
-                    if ipv4 in addrs:
-                        if show_ip:
-                            minions.add((id_, ipv4))
-                        else:
-                            minions.add(id_)
-                        break
-                for ipv6 in grains.get("ipv6", []):
-                    if ipv6 in addrs:
-                        if show_ip:
-                            minions.add((id_, ipv6))
-                        else:
-                            minions.add(id_)
-                        break
+
+            matched_families = set()
+            for id_, family, address in self._iter_minion_grains_addresses(
+                subset=subset
+            ):
+                if address in addrs and (id_, family) not in matched_families:
+                    matched_families.add((id_, family))
+                    if show_ip:
+                        minions.add((id_, address))
+                    else:
+                        minions.add(id_)
+
         return minions
 
     def _all_minions(self, expr=None, minions=None):
@@ -1702,6 +1751,10 @@ class CkMinions:
                     _res["minions"].extend(ssh_minions)
                     _res["ssh_minions"] = True
                 roster.destroy()
+        except TargetingError:
+            # Matching nothing instead would make a compound "not" match every
+            # minion and pass ACL subset checks.
+            raise
         except Exception:  # pylint: disable=broad-except
             log.exception(
                 "Failed matching available minions with %s pattern: %s", tgt_type, expr
@@ -2113,3 +2166,17 @@ class CkMinions:
             if good:
                 return True
         return False
+
+
+class TargetingError(salt.exceptions.SaltException):
+    """
+    A grain or pillar target could not be evaluated from the cache.
+
+    Raised rather than matching nothing: an empty operand inside a compound
+    ``not`` would match every minion, and an empty requested set passes ACL
+    subset checks.
+    """
+
+
+class TargetingTimeout(TargetingError):
+    """A grain or pillar target ran past sqlalchemy.targeting_timeout."""

@@ -14,15 +14,12 @@ import salt.client
 import salt.crypt
 import salt.exceptions
 import salt.payload
-import salt.transport
 import salt.utils.args
 import salt.utils.crypt
 import salt.utils.data
 import salt.utils.event
 import salt.utils.files
-import salt.utils.json
 import salt.utils.kinds
-import salt.utils.minions
 import salt.utils.sdb
 import salt.utils.stringutils
 import salt.utils.user
@@ -32,7 +29,17 @@ log = logging.getLogger(__name__)
 
 
 def get_key(opts):
-    return Key(opts)
+    if opts.get("keys.cache_driver") == "sqlalchemy":
+        # Imported here so masters using other drivers never load SQLAlchemy.
+        import salt.sqlalchemy  # pylint: disable=import-outside-toplevel
+        import salt.sqlalchemy.key  # pylint: disable=import-outside-toplevel
+
+        if not salt.sqlalchemy.orm_configured():
+            salt.sqlalchemy.configure_orm(opts)
+
+        return salt.sqlalchemy.key.SqlAlchemyKey(opts)
+    else:
+        return Key(opts)
 
 
 class KeyCLI:
@@ -760,14 +767,12 @@ class Key:
         Accept a dictionary of keys and return the current state of the
         specified keys
         """
-        ret = {}
-        cur_keys = self.list_keys()
-        for status, keys in match_dict.items():
-            for key in salt.utils.data.sorted_ignorecase(keys):
-                for keydir in (self.ACC, self.PEND, self.REJ, self.DEN):
-                    if keydir and fnmatch.filter(cur_keys.get(keydir, []), key):
-                        ret.setdefault(keydir, []).append(key)
-        return ret
+        matches = []
+        # not sure why this interface was ever added. just toss to glob match
+        for match_list in match_dict.values():
+            matches.extend(match_list)
+
+        return self.glob_match(matches)
 
     def list_keys(self):
         """
@@ -1030,14 +1035,21 @@ class Key:
                                         "master AES key is rotated or auth is revoked "
                                         "with 'saltutil.revoke_auth'.".format(key)
                                     )
+                        deleted = False
                         if status == "minions_denied":
                             self.cache.flush("denied_keys", key)
+                            deleted = True
                         else:
-                            self.cache.flush("keys", key)
-                        eload = {"result": True, "act": "delete", "id": key}
-                        self.event.fire_event(
-                            eload, salt.utils.event.tagify(prefix="key")
-                        )
+                            val = self.cache.fetch("keys", key)
+                            if val and self.STATE_MAP[val["state"]] == status:
+                                self.cache.flush("keys", key)
+                                deleted = True
+
+                        if deleted:
+                            eload = {"result": True, "act": "delete", "id": key}
+                            self.event.fire_event(
+                                eload, salt.utils.event.tagify(prefix="key")
+                            )
                     except OSError:
                         pass
         if self.opts.get("preserve_minions") is True:
@@ -1066,7 +1078,10 @@ class Key:
         for status, keys in self.list_keys().items():
             for key in keys:
                 try:
-                    self.cache.flush("keys", key)
+                    if status == "minions_denied":
+                        self.cache.flush("denied_keys", key)
+                    else:
+                        self.cache.flush("keys", key)
                     eload = {"result": True, "act": "delete", "id": key}
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="key"))
                 except OSError:

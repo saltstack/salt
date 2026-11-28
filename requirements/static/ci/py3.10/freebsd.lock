@@ -14,6 +14,8 @@ aiosignal==1.4.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   aiohttp
+alembic==1.20.1
+    # via -r requirements/static/ci/common.txt
 annotated-doc==0.0.4
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
@@ -193,6 +195,8 @@ googleapis-common-protos==1.75.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   opentelemetry-exporter-otlp-proto-http
+greenlet==3.5.6 ; (python_full_version < '3.11' and platform_machine == 'AMD64') or (python_full_version < '3.11' and platform_machine == 'WIN32') or (python_full_version < '3.11' and platform_machine == 'aarch64') or (python_full_version < '3.11' and platform_machine == 'amd64') or (python_full_version < '3.11' and platform_machine == 'ppc64le') or (python_full_version < '3.11' and platform_machine == 'win32') or (python_full_version < '3.11' and platform_machine == 'x86_64')
+    # via sqlalchemy
 hglib==2.6.2
     # via -r requirements/static/ci/freebsd.txt
 hypothesis==6.130.13
@@ -291,7 +295,9 @@ lxml==6.1.1
     #   ncclient
     #   xmldiff
 mako==1.2.4
-    # via -r requirements/static/ci/common.txt
+    # via
+    #   -r requirements/static/ci/common.txt
+    #   alembic
 markdown-it-py==3.0.0 ; python_full_version < '3.11'
     # via
     #   -c requirements/constraints.txt
@@ -453,6 +459,10 @@ psutil==7.2.2
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
+psycopg==3.3.9
+    # via -r requirements/static/ci/common.txt
+psycopg-binary==3.3.9 ; implementation_name != 'pypy'
+    # via psycopg
 psycopg2-binary==2.9.13 ; sys_platform != 'win32'
     # via -r requirements/static/ci/common.txt
 py-cpuinfo==9.0.0
@@ -656,6 +666,14 @@ smmap==5.0.2
     #   gitdb
 sortedcontainers==2.4.0
     # via hypothesis
+sqlalchemy==2.0.57 ; python_full_version < '3.11'
+    # via
+    #   -r requirements/static/ci/common.txt
+    #   alembic
+sqlalchemy==2.1.8 ; python_full_version >= '3.11'
+    # via
+    #   -r requirements/static/ci/common.txt
+    #   alembic
 sqlparse==0.5.5
     # via -r requirements/static/ci/common.txt
 strict-rfc3339==0.7
@@ -674,7 +692,9 @@ timelib==0.3.0
 toml==0.10.2
     # via -r requirements/static/ci/common.txt
 tomli==2.2.1 ; python_full_version < '3.11'
-    # via pytest
+    # via
+    #   alembic
+    #   pytest
 tornado==6.5.10
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
@@ -702,19 +722,23 @@ typing-extensions==4.16.0
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   aiohttp
     #   aiosignal
+    #   alembic
     #   cryptography
     #   multidict
     #   opentelemetry-api
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
+    #   psycopg
     #   pyopenssl
     #   pytest-system-statistics
+    #   sqlalchemy
     #   virtualenv
 tzdata==2026.6 ; sys_platform == 'win32'
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
+    #   psycopg
 urllib3==2.8.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
