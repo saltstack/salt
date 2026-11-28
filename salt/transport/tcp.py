@@ -13,6 +13,7 @@ import logging
 import multiprocessing
 import os
 import queue
+import random
 import socket
 import ssl
 import struct
@@ -305,6 +306,28 @@ class LoadBalancerServer(salt.utils.process.SignalHandlingProcess):
                 raise
 
 
+def _reconnect_delay(opts, attempt, to_master):
+    """
+    Seconds to wait after the ``attempt``-th failed connection attempt in a
+    row (counted from 1).
+
+    A minion connecting to its master doubles ``tcp_reconnect_backoff`` after
+    each failure, up to ``recon_max`` (milliseconds, as for the ZeroMQ
+    transport), and with ``recon_randomize`` waits a random time between half
+    that delay and the delay, so that minions which lost the master together
+    do not retry in step. Every other connection keeps the fixed
+    ``tcp_reconnect_backoff``.
+    """
+    backoff = opts.get("tcp_reconnect_backoff", 1)
+    if not to_master or opts.get("__role") != "minion":
+        return backoff
+    cap = max(backoff, opts.get("recon_max", 10000) / 1000.0)
+    delay = min(cap, backoff * 2 ** min(attempt - 1, 32))
+    if opts.get("recon_randomize", True):
+        delay = random.uniform(delay / 2, delay)
+    return delay
+
+
 class Resolver(tornado.netutil.DefaultLoopResolver):
     """
     Default resolver for tornado
@@ -426,6 +449,8 @@ class PublishClient(salt.transport.base.PublishClient):
         stream = None
         start = time.monotonic()
         timeout = kwargs.get("timeout", None)
+        to_master = bool(self.host) and self.host == self.opts.get("master_ip")
+        attempt = 0
         while stream is None and (not self._closed and not self._closing):
             try:
                 if self.host and self.port:
@@ -456,7 +481,9 @@ class PublishClient(salt.transport.base.PublishClient):
                         if stream.closed():
                             log.debug("TCP stream closed after SSL handshake")
                             stream = None
-                            continue
+                            if not to_master:
+                                continue
+                            raise tornado.iostream.StreamClosedError
                     _cap_stream_write_buffer(stream, self.opts)
                     self.unpacker = salt.utils.msgpack.Unpacker()
                     log.debug(
@@ -479,17 +506,19 @@ class PublishClient(salt.transport.base.PublishClient):
                     _connect_to = self.path
                 else:
                     _connect_to = f"{self.host}:{self.port}"
+                attempt += 1
+                delay = _reconnect_delay(self.opts, attempt, to_master)
                 log.debug(
                     "%s encountered an exception while connecting to"
-                    " %s: %r, will reconnect in %d seconds",
+                    " %s: %r, will reconnect in %.1f seconds",
                     self,
                     _connect_to,
                     exc,
-                    self.backoff,
+                    delay,
                 )
                 if timeout and time.monotonic() - start > timeout:
                     break
-                await asyncio.sleep(self.backoff)
+                await asyncio.sleep(delay)
             if timeout and time.monotonic() - start > timeout:
                 break
         return stream
@@ -3080,6 +3109,7 @@ class RequestClient(salt.transport.base.RequestClient):
         if self.source_ip or self.source_port:
             kwargs.update(source_ip=self.source_ip, source_port=self.source_port)
         stream = None
+        attempt = 0
         while stream is None and (not self._closed and not self._closing):
             try:
                 # XXX: Support ipc sockets too
@@ -3105,15 +3135,19 @@ class RequestClient(salt.transport.base.RequestClient):
                 # An ipc stream exists before it connects. Retry instead of
                 # returning it closed.
                 stream = None
+                attempt += 1
+                delay = _reconnect_delay(
+                    self.opts, attempt, not getattr(self, "is_ipc", False)
+                )
                 log.warning(
                     "TCP Message Client encountered an exception while connecting to"
-                    " %s:%s: %r, will reconnect in %d seconds",
+                    " %s:%s: %r, will reconnect in %.1f seconds",
                     self.host,
                     self.port,
                     exc,
-                    self.backoff,
+                    delay,
                 )
-                await asyncio.sleep(self.backoff)
+                await asyncio.sleep(delay)
         return stream
 
     async def connect(self):  # pylint: disable=invalid-overridden-method
