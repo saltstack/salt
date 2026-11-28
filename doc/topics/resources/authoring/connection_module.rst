@@ -39,10 +39,12 @@ Every connection module must define:
    ``init`` failure doesn't produce bogus results.
 
 ``discover(opts)``
-   Returns the list of bare resource ids (not full SRNs) that this
-   minion manages for this type. Called by ``saltutil.refresh_resources``
-   and by minion startup. Read from pillar — typically the
-   ``resource_ids`` key under the type's subtree.
+   Returns an iterable of bare resource IDs that this minion manages for
+   the type. Salt calls it during startup and inventory refresh. During
+   registration, Salt waits for the iterable to finish before publishing
+   that type's inventory. If discovery raises an exception, the master
+   retains the type's previous inventory and cached grains while the minion
+   continues registering other types.
 
 ``grains()``
    Returns the grain dict for the *currently dispatched* resource. The

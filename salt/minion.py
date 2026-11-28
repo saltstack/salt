@@ -23,6 +23,7 @@ import traceback
 import types
 import uuid
 from collections import OrderedDict
+from itertools import islice
 
 import tornado
 import tornado.ioloop
@@ -59,6 +60,7 @@ import salt.utils.jid
 import salt.utils.metrics
 import salt.utils.minion
 import salt.utils.minions
+import salt.utils.msgpack
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.process
@@ -1086,7 +1088,7 @@ class MinionBase:
         # modules and return None instead.
         self.gen_modules(initial_load=initial_load, context=context)
 
-    def _iter_resource_ids(self, resource_type):
+    def _iter_resource_ids(self, resource_type, *, raise_on_error=False):
         """
         Yield bare resource IDs for ``resource_type`` by invoking that
         type's ``discover(opts)`` function.
@@ -1099,14 +1101,17 @@ class MinionBase:
         invariant is enforced structurally by never calling ``list()``
         on this iterator from framework code.
 
-        A type whose loader has no ``<type>.discover`` entry, or whose
-        ``discover()`` raises, yields nothing (with a logged warning).
+        With ``raise_on_error=True``, report loader and discovery errors
+        to the caller so registration can distinguish failure from an
+        empty inventory.
         """
         funcs = getattr(self, "resource_funcs", None)
         if not funcs:
             try:
                 funcs = salt.loader.resource(self.opts)
             except Exception as exc:  # pylint: disable=broad-except
+                if raise_on_error:
+                    raise
                 log.warning(
                     "Resource loader unavailable for type '%s': %s",
                     resource_type,
@@ -1115,6 +1120,8 @@ class MinionBase:
                 return
         discover_fn = f"{resource_type}.discover"
         if discover_fn not in funcs:
+            if raise_on_error:
+                raise SaltInvocationError(f"Missing discovery function {discover_fn}")
             log.warning(
                 "No resource module found for type '%s'; skipping discovery.",
                 resource_type,
@@ -1123,6 +1130,8 @@ class MinionBase:
         try:
             ids = funcs[discover_fn](self.opts)
         except Exception as exc:  # pylint: disable=broad-except
+            if raise_on_error:
+                raise
             log.warning(
                 "Resource discovery failed for type '%s': %s",
                 resource_type,
@@ -4680,27 +4689,17 @@ class Minion(MinionBase):
         """
         Register this minion's resources with the master.
 
-        Resource IDs are streamed per-type from each enabled resource
-        module's ``discover(opts)`` generator -- the minion never holds
-        the full inventory in an ``opts["resources"]`` mapping.  For
-        each enabled type, IDs are drained from the generator into a
-        chunk of size :conf_minion:`resource_register_chunk_size`
-        (default 10000) and shipped to the master; the chunk is then
-        dropped so the memory footprint for a 200K-resource type stays
-        bounded by ``chunk_size * per-SRN-cost`` rather than
-        ``total * per-SRN-cost`` (see memory-ceiling invariant).
+        For each enabled type, stage IDs from ``discover(opts)`` in a
+        temporary spool that rolls to disk for large inventories. Publish
+        only after the type's iterator is exhausted successfully, so a
+        failed discovery cannot change that type's last known inventory.
 
-        Per-resource grains are rendered per-chunk inside
-        :meth:`_send_register_chunk` and shipped with that chunk's
-        SRNs.  Grain dicts are NOT accumulated across chunks on the
-        minion -- the chunk's grains are referenced only by the
-        outgoing RPC load and are dropped when the chunk completes.
-        This enforces the memory-ceiling invariant: a 200K-resource
-        register holds at most ``chunk_size`` grain dicts resident at
-        any instant instead of all 200K.
+        Successful inventories are sent in chunks of at most
+        :conf_minion:`resource_register_chunk_size` IDs. Grains are
+        collected only for the chunk being sent.
 
-        The master's ``resource_grains`` bank sees a fresh snapshot
-        every time this method runs; the triggers are:
+        Successful discovery refreshes the master's ``resource_grains``
+        bank. Registration is triggered by:
 
         * minion start / reconnect (``tune_in``);
         * the ``resource_refresh`` event on the minion event bus;
@@ -4739,32 +4738,35 @@ class Minion(MinionBase):
                     exc,
                 )
 
-        sent_any = False
         for rtype in enabled_types:
-            chunk_ids = []
-            chunk_index = 0
-            for rid in self._iter_resource_ids(rtype):
-                chunk_ids.append(rid)
-                if len(chunk_ids) >= chunk_size:
-                    # Ship the full chunk, then drop it so the per-
-                    # chunk grain dict rendered inside
-                    # ``_send_register_chunk`` can be GC-ed before the
-                    # next chunk is accumulated.  No cross-chunk
-                    # grain-cache accumulation.
-                    await self._send_register_chunk(
-                        rtype, chunk_ids, chunk_index, final=False
+            with tempfile.SpooledTemporaryFile(max_size=1024 * 1024) as inventory:
+                try:
+                    packer = salt.utils.msgpack.Packer(use_bin_type=True)
+                    for rid in self._iter_resource_ids(rtype, raise_on_error=True):
+                        inventory.write(packer.pack(rid))
+                    inventory.seek(0)
+                except Exception:  # pylint: disable=broad-except
+                    log.warning(
+                        "Unable to stage discovered resources for type '%s'; "
+                        "keeping the previous inventory",
+                        rtype,
+                        exc_info=True,
                     )
-                    chunk_ids = []
-                    chunk_index += 1
-            # Final chunk per type (possibly empty).  Always sent so the
-            # master can prune stale SRNs.
-            await self._send_register_chunk(rtype, chunk_ids, chunk_index, final=True)
-            sent_any = True
-            # Drop the final chunk reference so the per-type peak is
-            # released before iterating the next type.
-            del chunk_ids
+                    continue
 
-        if not sent_any:
+                ids = salt.utils.msgpack.Unpacker(inventory, raw=False)
+                chunk_index = 0
+                while True:
+                    chunk_ids = list(islice(ids, chunk_size))
+                    final = len(chunk_ids) < chunk_size
+                    await self._send_register_chunk(
+                        rtype, chunk_ids, chunk_index, final=final
+                    )
+                    if final:
+                        break
+                    chunk_index += 1
+
+        if not enabled_types:
             # No enabled types -- still send a final empty chunk so the
             # master clears any stale state from a previous config.
             await self._send_register_chunk(None, [], 0, final=True)

@@ -52,7 +52,7 @@ def minion_with_resources(minion_opts):
 
     # Stream per-type IDs from the static RESOURCES dict so target
     # resolution sees the same inventory the pre-refactor tests set up.
-    def _fake_iter(resource_type):
+    def _fake_iter(resource_type, **kwargs):
         return iter(RESOURCES.get(resource_type, []))
 
     m._iter_resource_ids = _fake_iter
