@@ -2771,3 +2771,235 @@ def test_socket_family_falls_back_when_unresolvable(host, expected):
     """
     with patch("socket.getaddrinfo", side_effect=socket.gaierror):
         assert salt.transport.tcp._socket_family(host) == expected
+
+
+async def test_tcp_request_client_reconnect_backoff_grows_to_recon_max(io_loop):
+    """
+    Regression test for issue #70983.
+
+    A failing request-channel connection must not retry at a fixed
+    interval forever: the wait doubles after each failure in a row and is
+    bounded by ``recon_max``.
+    """
+    opts = {
+        "master_uri": "tcp://127.0.0.1:4506",
+        "recon_default": 1000,
+        "recon_max": 8000,
+        "recon_randomize": False,
+    }
+    client = salt.transport.tcp.RequestClient(opts, io_loop)
+    sleeps = []
+
+    async def fail_connect(*args, **kwargs):
+        raise ConnectionRefusedError("refused")
+
+    async def fake_sleep(delay):
+        sleeps.append(delay)
+        if len(sleeps) >= 5:
+            client._closing = True
+
+    client._tcp_client.connect = fail_connect
+    try:
+        with patch("asyncio.sleep", fake_sleep):
+            assert await client.getstream() is None
+        assert sleeps == [1, 2, 4, 8, 8]
+    finally:
+        client.close()
+        client._tcp_client.close()
+
+
+async def test_tcp_request_client_reconnect_backoff_resets_after_success(io_loop):
+    """
+    Regression test for issue #70983.
+
+    Once a connection succeeds the backoff sequence starts again at the
+    initial delay.
+    """
+    opts = {
+        "master_uri": "tcp://127.0.0.1:4506",
+        "recon_default": 1000,
+        "recon_max": 8000,
+        "recon_randomize": False,
+    }
+    client = salt.transport.tcp.RequestClient(opts, io_loop)
+    sleeps = []
+    attempts = 0
+
+    async def flaky_connect(*args, **kwargs):
+        nonlocal attempts
+        attempts += 1
+        if attempts <= 2:
+            raise ConnectionRefusedError("refused")
+        return MagicMock()
+
+    async def fail_connect(*args, **kwargs):
+        raise ConnectionRefusedError("refused")
+
+    async def fake_sleep(delay):
+        sleeps.append(delay)
+        if len(sleeps) >= 4:
+            client._closing = True
+
+    client._tcp_client.connect = flaky_connect
+    try:
+        with patch("asyncio.sleep", fake_sleep):
+            assert await client.getstream() is not None
+            assert sleeps == [1, 2]
+            client._tcp_client.connect = fail_connect
+            assert await client.getstream() is None
+        assert sleeps == [1, 2, 1, 2]
+    finally:
+        client.close()
+        client._tcp_client.close()
+
+
+async def test_tcp_request_client_reconnect_delay_randomized(io_loop):
+    """
+    Regression test for issue #70983.
+
+    ``recon_randomize`` makes the initial delay a random value between
+    ``recon_default`` and ``recon_default + recon_max`` so a fleet of
+    minions does not retry in step.
+    """
+    opts = {
+        "master_uri": "tcp://127.0.0.1:4506",
+        "recon_default": 1000,
+        "recon_max": 8000,
+        "recon_randomize": True,
+    }
+    with patch("salt.transport.tcp.random.uniform", return_value=1.5) as uniform:
+        client = salt.transport.tcp.RequestClient(opts, io_loop)
+    uniform.assert_called_once_with(1.0, 9.0)
+    sleeps = []
+
+    async def fail_connect(*args, **kwargs):
+        raise ConnectionRefusedError("refused")
+
+    async def fake_sleep(delay):
+        sleeps.append(delay)
+        if len(sleeps) >= 4:
+            client._closing = True
+
+    client._tcp_client.connect = fail_connect
+    try:
+        with patch("asyncio.sleep", fake_sleep):
+            assert await client.getstream() is None
+        assert sleeps == [1.5, 3.0, 6.0, 8.0]
+    finally:
+        client.close()
+        client._tcp_client.close()
+
+
+async def test_tcp_request_client_tcp_reconnect_backoff_overrides_recon_default(
+    io_loop,
+):
+    """
+    ``tcp_reconnect_backoff`` remains the TCP-specific override of
+    ``recon_default`` for the initial delay when configured to a
+    non-default value; the backoff still grows to ``recon_max``.
+    """
+    opts = {
+        "master_uri": "tcp://127.0.0.1:4506",
+        "tcp_reconnect_backoff": 3,
+        "recon_default": 1000,
+        "recon_max": 8000,
+        "recon_randomize": False,
+    }
+    client = salt.transport.tcp.RequestClient(opts, io_loop)
+    sleeps = []
+
+    async def fail_connect(*args, **kwargs):
+        raise ConnectionRefusedError("refused")
+
+    async def fake_sleep(delay):
+        sleeps.append(delay)
+        if len(sleeps) >= 4:
+            client._closing = True
+
+    client._tcp_client.connect = fail_connect
+    try:
+        with patch("asyncio.sleep", fake_sleep):
+            assert await client.getstream() is None
+        assert sleeps == [3, 6, 8, 8]
+    finally:
+        client.close()
+        client._tcp_client.close()
+
+
+async def test_tcp_publish_client_reconnect_backoff_grows_to_recon_max(io_loop):
+    """
+    Regression test for issue #70983.
+
+    The publish channel retries a failed connection with the same
+    doubling, ``recon_max``-bounded backoff as the request channel.
+    """
+    opts = {
+        "master_ip": "127.0.0.1",
+        "recon_default": 1000,
+        "recon_max": 4000,
+        "recon_randomize": False,
+    }
+    client = salt.transport.tcp.PublishClient(
+        opts, io_loop, host="127.0.0.1", port=11122
+    )
+    sleeps = []
+
+    async def fail_connect(*args, **kwargs):
+        raise ConnectionRefusedError("refused")
+
+    async def fake_sleep(delay):
+        sleeps.append(delay)
+        if len(sleeps) >= 4:
+            client._closing = True
+
+    try:
+        with patch(
+            "salt.transport.tcp.TCPClientKeepAlive.connect", fail_connect
+        ), patch("asyncio.sleep", fake_sleep):
+            assert await client.getstream() is None
+        assert sleeps == [1, 2, 4, 4]
+    finally:
+        client.close()
+
+
+async def test_tcp_publish_client_backoff_when_stream_closed_after_tls_handshake(
+    io_loop,
+):
+    """
+    Regression test for issue #70983.
+
+    A publish connection the master closes right after the TLS handshake
+    must honor the backoff too, not retry at once.
+    """
+    opts = {
+        "master_ip": "127.0.0.1",
+        "recon_default": 1000,
+        "recon_max": 4000,
+        "recon_randomize": False,
+    }
+    client = salt.transport.tcp.PublishClient(
+        opts, io_loop, host="127.0.0.1", port=11122, ssl={"fake": True}
+    )
+    sleeps = []
+
+    fake_stream = MagicMock()
+    fake_stream.closed.return_value = True
+
+    async def connect(*args, **kwargs):
+        return fake_stream
+
+    async def fake_sleep(delay):
+        sleeps.append(delay)
+        if len(sleeps) >= 8:
+            client._closing = True
+
+    try:
+        with patch("salt.transport.tcp.TCPClientKeepAlive.connect", connect), patch(
+            "salt.transport.base.ssl_context", MagicMock(return_value=MagicMock())
+        ), patch("asyncio.sleep", fake_sleep):
+            assert await client.getstream() is None
+        # Each failed attempt is the 0.1s handshake check followed by the
+        # growing backoff.
+        assert sleeps == [0.1, 1, 0.1, 2, 0.1, 4, 0.1, 4]
+    finally:
+        client.close()
