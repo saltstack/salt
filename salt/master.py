@@ -3034,6 +3034,13 @@ class AESFuncs(TransportMethods):
                     # invariant to skip the per-match fetch.
                     _rtype, _sep, _rid = srn.partition(":")
                     if _sep and _rid:
+                        if (
+                            not cluster_mode
+                            and not self.ckminions.registry.has_resource(
+                                load["id"], _rtype, _rid
+                            )
+                        ):
+                            continue
                         gdict["resource_id"] = _rid
                     batch.append((srn, gdict))
                 if batch:
@@ -3885,6 +3892,13 @@ class AESFuncs(TransportMethods):
                     # invariant to skip the per-match fetch.
                     _rtype, _sep, _rid = srn.partition(":")
                     if _sep and _rid:
+                        if (
+                            not cluster_mode
+                            and not self.ckminions.registry.has_resource(
+                                load["id"], _rtype, _rid
+                            )
+                        ):
+                            continue
                         gdict["resource_id"] = _rid
                     batch.append((srn, gdict))
                 if batch:
@@ -5917,6 +5931,10 @@ class ClearFuncs(TransportMethods):
         # payload.pop("_stamp")
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)
 
+        # Dispatch against the same ownership snapshot on every transport.
+        payload["resource_owners"] = self.ckminions.get_resource_owners(
+            minions, payload["tgt"], payload.get("tgt_type")
+        )
         await self._send_pub(payload)
         return {
             "enc": "clear",

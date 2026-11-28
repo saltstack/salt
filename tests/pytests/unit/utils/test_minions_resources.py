@@ -17,7 +17,7 @@ Covers:
   :class:`salt.utils.resource_registry.ResourceRegistry`.
 * :meth:`CkMinions._check_resource_minions` — T@ expression resolution.
 * :meth:`CkMinions._augment_with_resources` — wildcard glob augmentation.
-* :meth:`CkMinions.check_minions` merge-mode conditional logic.
+* :meth:`CkMinions.check_minions` target expansion and publish topics.
 
 The registry is an mmap-backed singleton shared per-process. Tests use
 :func:`salt.utils.resource_registry.reset_registry` to get a fresh
@@ -31,7 +31,6 @@ import pytest
 import salt.utils.minions
 import salt.utils.resource_registry
 from salt.utils.minions import (
-    _MERGE_RESOURCE_FUNS,
     RESOURCE_INDEX_SCHEMA_VERSION,
     _build_resource_index,
     _coerce_resource_index_schema,
@@ -360,41 +359,57 @@ def test_augment_with_resources_registry_error_returns_minion_ids(ck):
 
 
 # ---------------------------------------------------------------------------
-# check_minions — integration with augmentation + merge-mode conditional
+# Target expansion and publish topics
 # ---------------------------------------------------------------------------
 
 
-def test_check_minions_glob_wildcard_augmented(ck_with_resources):
+@pytest.mark.parametrize(
+    "fun",
+    [
+        None,
+        "test.ping",
+        ["test.arg", "test.arg"],
+        "state.apply",
+        "state.highstate",
+        "state.sls",
+        "state.sls_id",
+        "state.single",
+    ],
+)
+def test_check_minions_glob_wildcard_augmented(ck_with_resources, fun):
     with patch.object(
-        ck_with_resources,
-        "_check_glob_minions",
-        return_value={"minions": ["minion"], "missing": []},
+        ck_with_resources.key, "glob_match", return_value={"minions": ["minion"]}
     ):
-        result = ck_with_resources.check_minions("*", tgt_type="glob")
-    assert "dummy-01" in result["minions"]
-    assert "node1" in result["minions"]
+        result = ck_with_resources.check_minions("mini*", tgt_type="glob", fun=fun)
+    assert set(result["minions"]) == {
+        "minion",
+        "dummy-01",
+        "dummy-02",
+        "dummy-03",
+        "node1",
+        "localhost",
+    }
 
 
-def test_check_minions_glob_specific_not_augmented(ck_with_resources):
+@pytest.mark.parametrize(
+    "target,target_type",
+    [
+        ("minion", "glob"),
+        ("mini* and G@os:Debian", "compound"),
+    ],
+)
+def test_check_minions_does_not_expand_managing_minion(
+    ck_with_resources, target, target_type
+):
     with patch.object(
+        ck_with_resources.key, "glob_match", return_value={"minions": ["minion"]}
+    ), patch.object(
         ck_with_resources,
-        "_check_glob_minions",
-        return_value={"minions": ["minion"], "missing": []},
+        "_check_grain_minions",
+        return_value={"minions": ["minion", "dummy-01"], "missing": []},
     ):
-        result = ck_with_resources.check_minions("minion", tgt_type="glob")
-    assert "dummy-01" not in result["minions"]
-
-
-def test_check_minions_compound_not_augmented(ck_with_resources):
-    with patch.object(
-        ck_with_resources,
-        "_check_compound_minions",
-        return_value={"minions": ["minion"], "missing": []},
-    ):
-        result = ck_with_resources.check_minions(
-            "minion and G@os:Debian", tgt_type="compound"
-        )
-    assert "dummy-01" not in result["minions"]
+        result = ck_with_resources.check_minions(target, tgt_type=target_type)
+    assert result["minions"] == ["minion"]
 
 
 def test_augment_registry_error_does_not_break_check_minions(ck):
@@ -402,88 +417,31 @@ def test_augment_registry_error_does_not_break_check_minions(ck):
         ck.registry,
         "get_resources_for_minion",
         side_effect=RuntimeError("registry failure"),
-    ), patch.object(
-        ck,
-        "_check_glob_minions",
-        return_value={"minions": ["minion"], "missing": []},
-    ):
-        result = ck.check_minions("*", tgt_type="glob")
-    assert "minion" in result["minions"]
+    ), patch.object(ck.key, "glob_match", return_value={"minions": ["minion"]}):
+        result = ck.check_minions("mini*", tgt_type="glob")
+    assert result["minions"] == ["minion"]
 
 
-def test_check_minions_merge_fun_skips_augmentation(ck_with_resources):
-    """Merge-mode wildcard globs (e.g. state.apply) must NOT augment with rids."""
-    with patch.object(
-        ck_with_resources,
-        "_check_glob_minions",
-        return_value={"minions": ["minion"], "missing": []},
-    ):
-        result = ck_with_resources.check_minions(
-            "*", tgt_type="glob", fun="state.apply"
-        )
-    assert "dummy-01" not in result["minions"]
-    assert "node1" not in result["minions"]
-    assert "minion" in result["minions"]
+def test_publish_topics_include_resource_owners_without_changing_target_ids(opts):
+    update_resource_index(opts, "minion-a", {"dummy": ["a1", "a2"]})
+    update_resource_index(opts, "minion-b", {"dummy": ["b1"]})
+    ck = salt.utils.minions.CkMinions(opts)
+    targets = ["a1", "ordinary-minion", "a2"]
+
+    assert ck.get_publish_topics(targets) == [*targets, "minion-a"]
+    assert targets == ["a1", "ordinary-minion", "a2"]
 
 
-def test_check_minions_merge_fun_all_merge_funs_skip(ck_with_resources):
-    for fun in _MERGE_RESOURCE_FUNS:
-        with patch.object(
-            ck_with_resources,
-            "_check_glob_minions",
-            return_value={"minions": ["minion"], "missing": []},
-        ):
-            result = ck_with_resources.check_minions("*", tgt_type="glob", fun=fun)
-        assert "dummy-01" not in result["minions"], f"augmented for {fun}"
+def test_ambiguous_bare_id_requires_a_resource_type(opts, caplog):
+    update_resource_index(opts, "minion-a", {"dummy": ["firewall-a"]})
+    update_resource_index(opts, "minion-b", {"ssh": ["firewall-a"]})
+    ck = salt.utils.minions.CkMinions(opts)
 
-
-def test_check_minions_list_fun_still_augments(ck_with_resources):
-    """Multifunction jobs pass ``fun`` as a list: must not TypeError."""
-    with patch.object(
-        ck_with_resources,
-        "_check_glob_minions",
-        return_value={"minions": ["minion"], "missing": []},
-    ):
-        result = ck_with_resources.check_minions(
-            "*", tgt_type="glob", fun=["test.arg", "test.arg"]
-        )
-    assert "dummy-01" in result["minions"]
-    assert "minion" in result["minions"]
-
-
-def test_check_minions_non_merge_fun_still_augments(ck_with_resources):
-    with patch.object(
-        ck_with_resources,
-        "_check_glob_minions",
-        return_value={"minions": ["minion"], "missing": []},
-    ):
-        result = ck_with_resources.check_minions("*", tgt_type="glob", fun="test.ping")
-    assert "dummy-01" in result["minions"]
-    assert "node1" in result["minions"]
-
-
-def test_check_minions_no_fun_still_augments(ck_with_resources):
-    with patch.object(
-        ck_with_resources,
-        "_check_glob_minions",
-        return_value={"minions": ["minion"], "missing": []},
-    ):
-        result = ck_with_resources.check_minions("*", tgt_type="glob")
-    assert "dummy-01" in result["minions"]
-    assert "node1" in result["minions"]
-
-
-def test_check_minions_merge_fun_compound_not_affected(ck_with_resources):
-    """The merge-mode skip only applies to wildcard globs, not compound targets."""
-    with patch.object(
-        ck_with_resources,
-        "_check_compound_minions",
-        return_value={"minions": ["minion"], "missing": []},
-    ):
-        result = ck_with_resources.check_minions(
-            "G@os:Debian", tgt_type="compound", fun="test.ping"
-        )
-    assert "dummy-01" not in result["minions"]
+    assert ck.get_resource_owners(["firewall-a"]) == {}
+    assert "Resource ID conflict for firewall-a" in caplog.text
+    assert ck.get_resource_owners(["firewall-a"], "T@ssh:firewall-a", "compound") == {
+        "firewall-a": ("ssh", "minion-b")
+    }
 
 
 def test_registry_resolve_bare_resource_id(populated_registry):
@@ -951,10 +909,26 @@ def test_augment_grain_literal_regex_predicate_does_not_take_fast_path(opts):
     assert result["minions"] == ["d-1"]
 
 
+def test_augment_grain_literal_uses_registered_types(opts):
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["ssh"]
+    present = {"dummy:dummy-01": {"resource_id": "dummy-01"}}
+    ck, fake = _build_ck_with_contains(opts, present)
+    ck.registry.register_minion("minion", {"dummy": ["dummy-01"]})
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:dummy-01", ":", regex_match=False
+    )
+
+    assert result["minions"] == ["dummy-01"]
+    fake.list.assert_not_called()
+
+
 def test_augment_grain_literal_no_configured_types_returns_empty(opts):
     """
-    Edge case: ``opts["resource_types"]`` missing / empty → the fast path
-    makes zero probes and returns no match. No fall-through to the scan.
+    With no configured or registered types the fast path returns no match
+    without scanning the grain cache.
     """
     opts["minion_data_cache"] = True
     opts.pop("resource_types", None)

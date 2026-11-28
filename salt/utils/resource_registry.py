@@ -408,49 +408,47 @@ class _ResourceIndexStore:
     # Primary: bulk / write-path
     # ------------------------------------------------------------------
 
-    def put_many(self, entries):
-        """
-        Insert many ``(srn_key, minion_id, resource_type)`` tuples.
+    def claim_many(self, minion_id, entries):
+        """Claim new SRNs and keep the existing owner when a claim conflicts."""
+        accepted = set()
 
-        Used by :meth:`ResourceRegistry.register_minion` after it has diff'd
-        the incoming resource set against the previous one for this minion.
-
-        When the underlying primary exposes a ``put_many`` (``MmapCache``
-        does), route the whole batch through it so the flock is acquired
-        once and heap fsyncs are deferred to a single batched commit —
-        measurably 70x faster than a looped ``put`` at 10K+ scale.
-        Backends without ``put_many`` fall back to a looped ``put``.
-        """
-        entries = list(entries)
-        if not entries:
+        def should_put(srn, current):
+            row = _decode_by_id_value(current)
+            if row and row["minion"] != minion_id:
+                log.warning(
+                    "Resource ID conflict for %s: minion %s already owns it; "
+                    "rejecting registration from %s",
+                    srn,
+                    row["minion"],
+                    minion_id,
+                )
+                return False
+            accepted.add(srn)
             return True
 
-        bulk = getattr(self._primary, "put_many", None)
-        if callable(bulk):
-            kv = [
-                (srn_key, _encode_by_id_value(minion_id, rtype))
-                for srn_key, minion_id, rtype in entries
+        if entries:
+            values = [
+                (srn, _encode_by_id_value(minion_id, rtype)) for srn, rtype in entries
             ]
-            ok = bool(bulk(kv))
-            if ok:
-                self._invalidate_version_cache()
-                self._touch_primary_mtime()
-            return ok
+            self._primary.put_many(values, should_put=should_put)
+            self._invalidate_version_cache()
+            self._touch_primary_mtime()
+        return accepted
 
-        ok = True
-        for srn_key, minion_id, rtype in entries:
-            if not self.put(srn_key, minion_id, rtype):
-                ok = False
-        return ok
+    def delete_many(self, srn_keys, minion_id):
+        """Remove stale SRNs that still belong to the releasing minion."""
 
-    def delete_many(self, srn_keys):
-        """
-        Tombstone many primary entries. Idempotent: absent keys are
-        silently ignored.
-        """
-        for k in srn_keys:
-            self.delete(k)
-        return True
+        def should_delete(current):
+            row = _decode_by_id_value(current)
+            return bool(row and row["minion"] == minion_id)
+
+        deleted = sum(
+            self._primary.delete(srn, should_delete=should_delete) for srn in srn_keys
+        )
+        if deleted:
+            self._invalidate_version_cache()
+            self._touch_primary_mtime()
+        return deleted
 
     # ------------------------------------------------------------------
     # Compaction
@@ -500,6 +498,15 @@ class _ResourceIndexStore:
         """
         self._ensure_derived_fresh()
         return list(self._by_type.get(resource_type, ()))
+
+    def match_resource_ids(self, predicate):
+        """Return distinct bare resource IDs selected by a predicate."""
+        self._ensure_derived_fresh()
+        return list(
+            dict.fromkeys(
+                rid for ids in self._by_type.values() for rid in ids if predicate(rid)
+            )
+        )
 
     def resource_types(self):
         """
@@ -903,7 +910,7 @@ class ResourceRegistry:
         out = []
         try:
             for rtype in self._store.resource_types():
-                if resource_id in self._store.rids_by_type(rtype):
+                if self.has_srn(rtype, resource_id):
                     out.append((rtype, resource_id))
         except Exception as exc:  # pylint: disable=broad-except
             log.warning(
@@ -912,6 +919,14 @@ class ResourceRegistry:
                 exc,
             )
         return out
+
+    def resource_types(self):
+        """Return the types registered by managing minions."""
+        return self._store.resource_types()
+
+    def match_resource_ids(self, predicate):
+        """Return the registered bare resource IDs selected by a predicate."""
+        return self._store.match_resource_ids(predicate)
 
     def get_resource_ids_by_type(self, resource_type):
         """
@@ -945,7 +960,7 @@ class ResourceRegistry:
             for rid in rids or ():
                 srn = resource_index_srn_key(rtype, rid)
                 new_keys.add(srn)
-                to_put.append((srn, minion_id, rtype))
+                to_put.append((srn, rtype))
 
         to_delete = []
         for rtype, rids in previous.items():
@@ -957,15 +972,15 @@ class ResourceRegistry:
         # Order matters only for correctness under concurrent reads: puts
         # first so that a resource moving from one type to another (rare)
         # is never transiently missing.
-        self._store.put_many(to_put)
-        self._store.delete_many(to_delete)
+        added = self._store.claim_many(minion_id, to_put)
+        deleted = self._store.delete_many(to_delete, minion_id)
 
         # Opportunistic compaction on the write path. Time-throttled so
         # the O(num_slots) ``get_stats`` call doesn't run more than once
         # per :data:`DEFAULT_COMPACT_MIN_INTERVAL` seconds.
         self.maybe_compact()
 
-        return len(to_put), len(to_delete)
+        return len(added), deleted
 
     def register_minion_chunk(
         self, minion_id, resources, chunk_final, chunk_scope=None, chunk_index=None
@@ -1025,7 +1040,7 @@ class ResourceRegistry:
             for rid in rids or ():
                 srn = resource_index_srn_key(rtype, rid)
                 new_keys.add(srn)
-                to_put.append((srn, minion_id, rtype))
+                to_put.append((srn, rtype))
         # The mmap write is itself fsync'd and independent per SRN, so
         # it can safely run outside the lock (duplicate ``put_many`` is
         # idempotent).  But accumulating into ``_pending_registers`` and
@@ -1033,8 +1048,7 @@ class ResourceRegistry:
         # peer-apply thread for the same ``(minion_id, scope)`` could
         # otherwise observe a half-populated ``keys`` set and wipe
         # valid SRNs.
-        if to_put:
-            self._store.put_many(to_put)
+        added = self._store.claim_many(minion_id, to_put)
 
         now = time.monotonic()
         with self._pending_registers_lock:
@@ -1106,7 +1120,7 @@ class ResourceRegistry:
                         final_index,
                         sorted(scope_state["seen_indexes"]),
                     )
-                return len(to_put), 0
+                return len(added), 0
 
             # Ready to prune: snapshot the committed SRN set and clear
             # the per-scope entry (and the minion entry if it's now
@@ -1128,14 +1142,13 @@ class ResourceRegistry:
                 srn = resource_index_srn_key(rtype, rid)
                 if srn not in committed:
                     to_delete.append(srn)
-        if to_delete:
-            self._store.delete_many(to_delete)
+        deleted = self._store.delete_many(to_delete, minion_id)
 
         # Opportunistic compaction on the write path -- same policy as
         # :meth:`register_minion`.
         self.maybe_compact()
 
-        return len(to_put), len(to_delete)
+        return len(added), deleted
 
     def _evict_stale_pending_registers_locked(self, now):
         """
@@ -1205,8 +1218,7 @@ class ResourceRegistry:
             for rtype, rids in previous.items()
             for rid in rids
         ]
-        self._store.delete_many(to_delete)
-        return len(to_delete)
+        return self._store.delete_many(to_delete, minion_id)
 
     # ------------------------------------------------------------------
     # Maintenance
@@ -1334,6 +1346,15 @@ class _NullResourceRegistry:
         return False
 
     def resolve_bare_resource_id(self, resource_id):
+        return []
+
+    def resource_types(self):
+        return ()
+
+    def match_resource_ids(self, predicate):
+        return []
+
+    def get_managing_minions_for_srn(self, resource_type, resource_id):
         return []
 
     def get_resource_ids_by_type(self, resource_type):

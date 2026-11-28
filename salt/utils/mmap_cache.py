@@ -1538,7 +1538,7 @@ class MmapCache:
             log.error("Error writing to mmap cache %s: %s", self.path, exc)
             return False
 
-    def put_many(self, items):
+    def put_many(self, items, *, should_put=None):
         """
         Bulk-insert many ``(key, value)`` tuples with a single flock
         acquisition and a single batched flush at the end.
@@ -1556,6 +1556,8 @@ class MmapCache:
 
         :param items: iterable of ``(key, value)`` tuples; ``value`` may
             be ``None``, ``str``, or ``bytes`` (same rules as ``put``).
+        :param should_put: Optional predicate of (key, current value) evaluated
+            under the write lock. Entries it rejects are skipped.
         :returns: ``True`` if every inner ``put`` succeeded, ``False``
             otherwise (partial writes are still durable — the batch flush
             runs in the ``finally`` arm).
@@ -1563,6 +1565,10 @@ class MmapCache:
         try:
             with self._thread_lock:
                 with self._lock():
+                    if should_put is not None:
+                        # A conditional mutation must see the current inode,
+                        # even if another worker just compacted the cache.
+                        self._last_staleness_check = None
                     if not self.open(write=True):
                         return False
                     self._batch_mode = True
@@ -1577,6 +1583,10 @@ class MmapCache:
                                     item[0] if isinstance(item, (list, tuple)) else item
                                 )
                                 value = None
+                            if should_put is not None and not should_put(
+                                key, self.get(key)
+                            ):
+                                continue
                             # Record the active segment before the put so we
                             # fsync it below. ``_append_to_heap`` may roll a
                             # new segment; add that too.
@@ -1694,13 +1704,17 @@ class MmapCache:
 
             return None
 
-    def delete(self, key):
-        """Mark *key* as DELETED in the index. Heap bytes become unreachable."""
+    def delete(self, key, *, should_delete=None):
+        """Delete a key if its current value passes the optional predicate."""
         key_bytes = salt.utils.stringutils.to_bytes(key)[: self.key_size]
 
         try:
             with self._thread_lock:
                 with self._lock():
+                    if should_delete is not None:
+                        # A conditional mutation must see the current inode,
+                        # even if another worker just compacted the cache.
+                        self._last_staleness_check = None
                     if not self.open(write=True):
                         return False
                     h = self._hash(key_bytes)
@@ -1716,6 +1730,11 @@ class MmapCache:
                             continue
                         if self._read_slot_key(offset) != key_bytes:
                             continue
+
+                        if should_delete is not None and not should_delete(
+                            self.get(key)
+                        ):
+                            return False
 
                         self._mm[offset] = DELETED
                         self._update_header(occupied_delta=-1, deleted_delta=1)

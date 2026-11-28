@@ -8,11 +8,13 @@ import collections
 import contextlib
 import copy
 import errno
+import fnmatch
 import gc
 import logging
 import multiprocessing
 import os
 import random
+import re
 import signal
 import stat
 import sys
@@ -6061,7 +6063,9 @@ class Minion(MinionBase):
             )
             if match_func is None:
                 return False
-            if load["tgt_type"] in ("grain", "grain_pcre", "pillar"):
+            if load["tgt_type"] == "compound":
+                minion_matches = match_func(load["tgt"], match_resources=False)
+            elif load["tgt_type"] in ("grain", "grain_pcre", "pillar"):
                 delimiter = load.get("delimiter", DEFAULT_TARGET_DELIM)
                 minion_matches = match_func(load["tgt"], delimiter=delimiter)
             else:
@@ -6070,6 +6074,16 @@ class Minion(MinionBase):
             minion_matches = self.matchers["glob_match.match"](load["tgt"])
 
         resource_targets = self._resolve_resource_targets(load)
+        # Consume the snapshot here so fan-out does not copy it into
+        # every individual Resource job.
+        owners = load.pop("resource_owners", None)
+        if owners is not None:
+            resource_targets = [
+                resource
+                for resource in resource_targets
+                if tuple(owners.get(resource["id"], ()))
+                == (resource["type"], self.opts["id"])
+            ]
         load["resource_targets"] = resource_targets
         # For pure resource targets (e.g. ``T@dummy:dummy-01`` or a bare
         # resource id glob like ``salt 'dummy-01' state.single``) the
@@ -6084,53 +6098,14 @@ class Minion(MinionBase):
         # produces no return.
         fun = load.get("fun")
         is_merge_fun = isinstance(fun, str) and fun in self._MERGE_RESOURCE_FUNS
-        is_pure_resource = self._is_pure_resource_target(load)
-        load["pure_resource_target"] = is_pure_resource
-        load["minion_is_target"] = (
-            bool(minion_matches) and (is_merge_fun or not is_pure_resource)
-        ) or (is_merge_fun and bool(resource_targets))
+        load["pure_resource_target"] = bool(resource_targets) and not minion_matches
+        load["minion_is_target"] = bool(minion_matches) or (
+            is_merge_fun and bool(resource_targets)
+        )
 
         if not load["minion_is_target"] and not resource_targets:
             return False
         return True
-
-    def _is_pure_resource_target(self, load):
-        """
-        Return True when the target expression addresses only Salt
-        Resources — not the managing minion itself.
-
-        Two shapes count as pure-resource:
-
-        * Compound expressions whose every term is a ``T@`` or ``M@``
-          engine (with the usual boolean operators).
-        * Bare-id glob targets (no wildcards) whose ``tgt`` matches a
-          managed resource id. ``salt 'dummy-01' state.single …``
-          looks like an ordinary glob to the master but is logically a
-          pure-resource target from the managing minion's point of
-          view — the bare id is the resource, not the minion.
-        """
-        tgt = load.get("tgt", "")
-        tgt_type = load.get("tgt_type", "glob")
-        if tgt_type == "compound":
-            words = tgt.split() if isinstance(tgt, str) else list(tgt)
-            opers = {"and", "or", "not", "(", ")"}
-            return all(
-                w in opers or w.startswith("T@") or w.startswith("M@") for w in words
-            )
-        if (
-            tgt_type == "glob"
-            and isinstance(tgt, str)
-            and tgt != self.opts.get("id")
-            and not any(c in tgt for c in ("*", "?", "["))
-        ):
-            # Scan each enabled type's discover() stream for a bare-id
-            # match.  Early-exit on hit keeps this bounded in the common
-            # case; the generator is torn down as soon as we return.
-            for rtype in salt.utils.resources.enabled_resource_types(self.opts):
-                for rid in self._iter_resource_ids(rtype):
-                    if tgt == rid:
-                        return True
-        return False
 
     # Functions that are internal Salt plumbing and should never be dispatched
     # to managed resources.  Resources don't participate in job-status queries,
@@ -6181,7 +6156,7 @@ class Minion(MinionBase):
             return "_|-".join(parts)
         return f"no_|-{rid}_|-{rid}_|-None"
 
-    def _resource_term_matches(self, term, rtype, rid, gdict, resources):
+    def _resource_term_matches(self, term, rtype, rid, gdict):
         """
         Evaluate a single compound-expression term against one resource.
 
@@ -6197,57 +6172,35 @@ class Minion(MinionBase):
         * ``P@key:regex`` — per-resource grain regex match.
         * ``L@a,b,c`` — bare-id list membership.
         * ``E@regex`` — bare-id regex match.
+        * ``M@minion-id`` — exact managing minion ID.
         """
-        if term.startswith("T@"):
-            pattern = term[2:]
-            if ":" in pattern:
-                t, _, r = pattern.partition(":")
-                if not r:
-                    return rtype == t and rid in resources.get(t, [])
-                return rtype == t and rid == r and rid in resources.get(t, [])
-            return rtype == pattern and rid in resources.get(pattern, [])
-        if term.startswith("G@"):
+        target = salt.utils.minions.parse_target(term)
+        engine, pattern = target["engine"], target["pattern"]
+        if engine == "T":
+            target_type, _, target_id = pattern.partition(":")
+            return rtype == target_type and (not target_id or rid == target_id)
+        if engine == "M":
+            return self.opts.get("id") == pattern
+        if engine in ("G", "P"):
+            return salt.utils.data.subdict_match(
+                gdict,
+                pattern,
+                delimiter=target["delimiter"] or DEFAULT_TARGET_DELIM,
+                regex_match=engine == "P",
+            )
+        if engine == "L":
+            return rid in [item.strip() for item in pattern.split(",")]
+        if engine == "E":
             try:
-                return bool(
-                    salt.utils.data.subdict_match(
-                        gdict,
-                        term[2:],
-                        delimiter=DEFAULT_TARGET_DELIM,
-                        regex_match=False,
-                    )
-                )
-            except Exception:  # pylint: disable=broad-except
+                return bool(re.match(pattern, rid))
+            except re.error:
                 return False
-        if term.startswith("P@"):
-            try:
-                return bool(
-                    salt.utils.data.subdict_match(
-                        gdict,
-                        term[2:],
-                        delimiter=DEFAULT_TARGET_DELIM,
-                        regex_match=True,
-                    )
-                )
-            except Exception:  # pylint: disable=broad-except
-                return False
-        if term.startswith("L@"):
-            return rid in [t.strip() for t in term[2:].split(",") if t.strip()]
-        if term.startswith("E@"):
-            try:
-                import re as _re  # noqa: PLC0415
-
-                return bool(_re.match(term[2:], rid))
-            except _re.error:
-                return False
-        # M@, I@, J@, S@, N@, R@, plain glob — these target minions or
-        # operate on data resources don't carry. Treated as non-matching
-        # so that compounds like ``G@a:1 and not S@10/8`` evaluate against
-        # a resource purely on its grains (the ``S@`` term contributes
-        # ``False`` and ``not False`` is ``True``, leaving the grain term
-        # to decide).
+        if engine is None:
+            return fnmatch.fnmatch(rid, pattern)
+        # Pillar, IP and other minion-only engines have no Resource data.
         return False
 
-    def _resource_matches_compound(self, tgt, srn, gdict, resources):
+    def _resource_matches_compound(self, tgt, srn, gdict):
         """
         Evaluate a full compound expression against one resource.
 
@@ -6270,9 +6223,11 @@ class Minion(MinionBase):
         parts = []
         for word in words:
             if word in ("and", "or", "not", "(", ")"):
+                if word == "not" and parts and parts[-1] not in ("and", "or", "("):
+                    parts.append("and")
                 parts.append(word)
                 continue
-            matched = self._resource_term_matches(word, rtype, rid, gdict, resources)
+            matched = self._resource_term_matches(word, rtype, rid, gdict)
             parts.append("True" if matched else "False")
         expression = " ".join(parts).strip()
         if not expression:
@@ -6295,18 +6250,11 @@ class Minion(MinionBase):
         in ``self.opts``.  The resulting target list is bounded by the
         matched-resource count, not by the total inventory.
 
-        For wildcard glob targets (e.g. ``salt '*'``), returns all
-        managed resources so that the command also runs against
-        resources.  For compound T@ targets, returns only the matched
-        resources.  For list targets, returns resources whose bare id
-        appears in the list.  For an exact glob with no wildcards,
-        returns a single resource if ``tgt`` is a bare id managed by
-        this minion (``salt <resource-id>``).  For specific-name glob
-        targets that are not resource ids (e.g. ``salt 'minion'``),
-        grain, pillar, or compound expressions with no T@ terms, returns
-        an empty list -- the operator is targeting the minion itself,
-        not its resources.  Internal/plumbing functions (see
-        ``_NO_RESOURCE_FUNS``) are never dispatched to resources.
+        Wildcard globs can match resource IDs directly and also include the
+        resources of matching managing minions. List and PCRE targets match
+        resource IDs, and grain targets match each resource's own grains.
+        Compound targets evaluate identity and grains per resource.
+        Internal functions in ``_NO_RESOURCE_FUNS`` run only on minions.
         """
         enabled_types = salt.utils.resources.enabled_resource_types(self.opts)
         if not enabled_types:
@@ -6324,26 +6272,24 @@ class Minion(MinionBase):
         tgt_type = load.get("tgt_type", "glob")
 
         if tgt_type == "compound":
-            # Compound terms reference per-resource grains + identity.
-            # Stream per-type so the peak resident set is bounded by a
-            # single type's chunk -- NOT by the full inventory.  Grain
-            # dicts for a type are rendered once per dispatch and
-            # dropped after the per-type scan, so a compound match
-            # against 200K resources never holds all 200K grain dicts
-            # resident.
-            resources_view = {
-                rtype: list(self._iter_resource_ids(rtype)) for rtype in enabled_types
-            }
+            words = tgt.split() if isinstance(tgt, str) else tgt
+            if not salt.utils.minions.compound_targets_resources(words):
+                return []
+            match_grains = any(
+                salt.utils.minions.parse_target(word)["engine"] in ("G", "P")
+                for word in words
+            )
             targets = []
-            for rtype, rids in resources_view.items():
-                rg = self._collect_resource_grains({rtype: rids})
+            for rtype in enabled_types:
+                rids = self._iter_resource_ids(rtype)
+                grains = {}
+                if match_grains:
+                    rids = list(rids)
+                    grains = self._collect_resource_grains({rtype: rids})
                 for rid in rids:
                     srn = f"{rtype}:{rid}"
-                    gdict = rg.get(srn, {})
-                    if self._resource_matches_compound(tgt, srn, gdict, resources_view):
+                    if self._resource_matches_compound(words, srn, grains.get(srn, {})):
                         targets.append({"id": rid, "type": rtype})
-                # Drop this type's grain dict before moving to the next.
-                del rg
             return targets
 
         if tgt_type == "list":
@@ -6376,7 +6322,7 @@ class Minion(MinionBase):
                     if salt.utils.data.subdict_match(
                         gdict,
                         tgt,
-                        delimiter=DEFAULT_TARGET_DELIM,
+                        delimiter=load.get("delimiter", DEFAULT_TARGET_DELIM),
                         regex_match=(tgt_type == "grain_pcre"),
                     ):
                         _rtype, _, rid = srn.partition(":")
@@ -6385,30 +6331,29 @@ class Minion(MinionBase):
                 del rg
             return targets
 
-        # For glob targets, only dispatch to resources when the pattern
-        # contains a wildcard.  A bare name like ``salt 'minion' test.ping``
-        # targets the minion itself; it should not implicitly run against
-        # its resources.
-        if (
-            tgt_type == "glob"
-            and isinstance(tgt, str)
-            and not any(c in tgt for c in ("*", "?", "["))
-        ):
-            for rtype in enabled_types:
-                for rid in self._iter_resource_ids(rtype):
-                    if rid == tgt:
-                        return [{"id": tgt, "type": rtype}]
+        if tgt_type == "glob":
+            if not isinstance(tgt, str):
+                return []
+            wildcard = not salt.utils.minions._is_literal_glob(
+                tgt
+            )  # pylint: disable=protected-access
+            match_manager = wildcard and fnmatch.fnmatch(self.opts.get("id", ""), tgt)
+
+            def match(rid):
+                return match_manager or fnmatch.fnmatch(rid, tgt)
+
+        elif tgt_type == "pcre":
+            match = re.compile(tgt).match
+        else:
+            # Pillar, IP and other minion-only engines have no Resource data.
             return []
 
-        # Wildcard glob -- dispatch to every managed resource.  This
-        # path is inherently O(inventory) in the number of returned
-        # targets; callers that care about memory should scope their
-        # target pattern tighter.
-        all_resources = []
-        for rtype in enabled_types:
-            for rid in self._iter_resource_ids(rtype):
-                all_resources.append({"id": rid, "type": rtype})
-        return all_resources
+        return [
+            {"id": rid, "type": rtype}
+            for rtype in enabled_types
+            for rid in self._iter_resource_ids(rtype)
+            if match(rid)
+        ]
 
     def destroy(self):
         """
@@ -7456,7 +7401,6 @@ for _attr in (
     "_resource_term_matches",
     "_resource_matches_compound",
     "_resolve_resource_targets",
-    "_is_pure_resource_target",
     "_collect_resource_grains",
 ):
     setattr(MinionBase, _attr, getattr(Minion, _attr))

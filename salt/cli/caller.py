@@ -347,16 +347,7 @@ class BaseCaller:
             log.exception("Failed to resolve resource targets for -r dispatch")
             resource_targets = []
 
-        # When the target is purely T@/M@ compound terms (e.g.
-        # ``T@dummy:dummy-01``), the managing minion should NOT also receive
-        # the call — the operator is addressing resources, not the minion.
-        # Mirrors Minion._target_load behaviour for master-driven jobs.
-        is_pure_resource_tgt = self.minion._is_pure_resource_target(load)
-        minion_matches = (
-            False
-            if is_pure_resource_tgt
-            else self._target_matches_managing_minion(tgt, tgt_type)
-        )
+        minion_matches = self._target_matches_managing_minion(tgt, tgt_type)
 
         # Argument parsing — pick any reachable copy of the function so
         # ``load_args_and_kwargs`` can introspect its signature.
@@ -480,6 +471,8 @@ class BaseCaller:
         if match_fn is None:
             return False
         try:
+            if tgt_type == "compound":
+                return bool(match_fn(tgt, match_resources=False))
             if tgt_type in ("grain", "grain_pcre", "pillar", "pillar_pcre"):
                 delimiter = self.opts.get("delimiter") or ":"
                 return bool(match_fn(tgt, delimiter=delimiter))

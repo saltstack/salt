@@ -1766,10 +1766,7 @@ async def test_register_resources_persists_resource_grains_to_cache(
                 "dummy:m2-d2": {"k": "v2", "resource_id": "m2-d2"},
             },
         }
-        with patch(
-            "salt.utils.minions.update_resource_index_chunk", return_value=(2, 0)
-        ):
-            await aes_funcs._register_resources(load)
+        await aes_funcs._register_resources(load)
         cache = aes_funcs.masterapi.cache
         stored_keys = sorted(cache.list("resource_grains") or [])
         assert stored_keys == ["dummy:m2-d1", "dummy:m2-d2"]
@@ -1838,52 +1835,38 @@ async def test_register_resources_flushes_dropped_resource_grain_entry(
         salt.utils.resource_registry.reset_registry()
 
 
-async def test_register_resources_does_not_flush_srn_owned_by_other_minion(
+async def test_duplicate_registration_preserves_current_owners_grains(
     master_opts, tmp_path
 ):
-    """
-    Two minions managing different SRNs must not stomp on each other's
-    ``resource_grains`` entries during re-registration. When minion-A drops
-    a SRN that minion-B owns (rare but possible if the registry was
-    re-keyed), the flush must skip it.
-    """
     import salt.utils.resource_registry
 
     aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+
+    def registration(owner):
+        return {
+            "id": f"minion-{owner}",
+            "resources": {"dummy": ["shared"]},
+            "resource_grains": {"dummy:shared": {"who": owner}},
+        }
+
+    async def release(owner):
+        await aes_funcs._register_resources(
+            {"id": f"minion-{owner}", "resources": {}, "resource_grains": {}}
+        )
+
     try:
-        # minion-A registers dummy:shared.
-        await aes_funcs._register_resources(
-            {
-                "id": "minion-A",
-                "resources": {"dummy": ["shared"]},
-                "resource_grains": {"dummy:shared": {"who": "A"}},
-            }
-        )
-        # minion-B claims dummy:shared (registry overwrites the SRN's owner).
-        await aes_funcs._register_resources(
-            {
-                "id": "minion-B",
-                "resources": {"dummy": ["shared"]},
-                "resource_grains": {"dummy:shared": {"who": "B"}},
-            }
-        )
+        await aes_funcs._register_resources(registration("A"))
+        await aes_funcs._register_resources(registration("B"))
         cache = aes_funcs.masterapi.cache
-        # ``resource_id`` is injected by the register path from the bank
-        # key's id portion.
         assert cache.fetch("resource_grains", "dummy:shared") == {
-            "who": "B",
+            "who": "A",
             "resource_id": "shared",
         }
-        # minion-A re-registers with no resources. Its flush walk would
-        # consider dummy:shared "stale"; the owner check (registry says B
-        # owns it) must prevent the flush.
-        await aes_funcs._register_resources(
-            {
-                "id": "minion-A",
-                "resources": {},
-                "resource_grains": {},
-            }
-        )
+
+        await release("A")
+        await aes_funcs._register_resources(registration("B"))
+        await release("A")
+
         assert cache.fetch("resource_grains", "dummy:shared") == {
             "who": "B",
             "resource_id": "shared",

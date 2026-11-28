@@ -17,11 +17,6 @@ from tests.conftest import FIPS_TESTRUN
 MINION_ID = "resources-minion"
 MINION_ID_2 = "resources-minion-2"
 MINION_ID_DYN = "resources-minion-dyn"
-
-# Resource type name for the synthetic ``dynamic_test`` type defined
-# further below.  Declared up here so :func:`salt_master` can list it
-# in ``resource_types`` -- the master's literal ``resource_id:<id>``
-# grain fast-path only probes resource types enabled in its own opts.
 DYNAMIC_TEST_RTYPE = "dynamic_test"
 
 # Dummy resource IDs that the minion manages in every test in this
@@ -68,15 +63,6 @@ def salt_master(request, salt_factories):
         "publish_signing_algorithm": (
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
-        # The master's literal ``resource_id:<id>`` fast-path in
-        # :func:`salt.utils.minions._augment_grain_match_with_resource_grains`
-        # probes the ``resource_grains`` bank key per enabled rtype
-        # (``f"{rtype}:{rid}"``).  The enabled set comes from the
-        # master's own ``resource_types`` opt — so for grain targeting
-        # of resource types managed by *minions* to work, the master
-        # must know which rtypes to probe.  Mirror the dummy +
-        # dynamic_test enablement here.
-        "resource_types": ["dummy", DYNAMIC_TEST_RTYPE],
     }
     factory = salt_factories.salt_master_daemon(
         "resources-master",

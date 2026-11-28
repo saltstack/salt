@@ -120,6 +120,15 @@ def parse_target(target_expression):
     return ret
 
 
+def compound_targets_resources(words):
+    """Whether any compound term matches Resource IDs, types, or grains."""
+    return any(
+        parse_target(word)["engine"] in (None, "T", "G", "P", "L", "E")
+        for word in words
+        if word not in ("and", "or", "not", "(", ")")
+    )
+
+
 def get_minion_data(minion, opts):
     """
     Get the grains/pillar for a specific minion.  If minion is None, it
@@ -315,20 +324,6 @@ def _coerce_resource_index_schema(index):
         "by_type": by_type,
         "by_minion": by_minion,
     }
-
-
-# Functions where resources run inline and their results are merged into the
-# managing minion's own response. The operator sees ONE combined block + ONE
-# Summary section instead of separate blocks per resource.
-_MERGE_RESOURCE_FUNS = frozenset(
-    {
-        "state.apply",
-        "state.highstate",
-        "state.sls",
-        "state.sls_id",
-        "state.single",
-    }
-)
 
 
 def _build_resource_index(by_minion):
@@ -623,10 +618,10 @@ class CkMinions:
         )
 
     def _check_glob_minions(
-        self, expr, greedy, minions=None
+        self, expr, greedy, minions=None, expand_managers=True
     ):  # pylint: disable=unused-argument
         """
-        Return the minions found by looking via globs
+        Return the IDs found by looking via globs
         """
         if minions:
             result_minions = fnmatch.filter(minions, expr)
@@ -637,24 +632,30 @@ class CkMinions:
                 # Salt 3007 ``Key`` API — ``name_match`` / legacy layouts without ``glob_match``.
                 result_minions = fnmatch.filter(list(self._pki_minions()), expr)
 
-        if (
-            isinstance(expr, str)
-            and expr
-            and not any(c in expr for c in ("*", "?", "["))
-        ):
-            try:
-                if expr not in result_minions and (
-                    self.registry.resolve_bare_resource_id(expr)
-                    or salt.utils.resources.bare_resource_id_in_minion_data_cache(
-                        self.opts, expr, cache=self.cache
+        if isinstance(expr, str) and expr:
+            if _is_literal_glob(expr):
+                try:
+                    if expr not in result_minions and (
+                        self.registry.resolve_bare_resource_id(expr)
+                        or salt.utils.resources.bare_resource_id_in_minion_data_cache(
+                            self.opts, expr, cache=self.cache
+                        )
+                    ):
+                        result_minions.append(expr)
+                except Exception:  # pylint: disable=broad-except
+                    log.debug(
+                        "Glob match: bare resource id resolution failed for %r",
+                        expr,
+                        exc_info=True,
                     )
-                ):
-                    result_minions = list(result_minions) + [expr]
-            except Exception:  # pylint: disable=broad-except
-                log.debug(
-                    "Glob match: bare resource id resolution failed for %r",
-                    expr,
-                    exc_info=True,
+            else:
+                # Manager globs retain their historic fan-out to every child.
+                # Match bare Resource IDs independently so a device-only glob
+                # also works when none of its managers match the pattern.
+                if expand_managers:
+                    result_minions = self._augment_with_resources(result_minions)
+                result_minions = self._append_matching_resources(
+                    result_minions, lambda rid: fnmatch.fnmatch(rid, expr)
                 )
 
         return {"minions": result_minions, "missing": []}
@@ -715,18 +716,77 @@ class CkMinions:
     def _check_pcre_minions(
         self, expr, greedy, minions=None
     ):  # pylint: disable=unused-argument
-        """
-        Return the minions found by looking via regular expressions
-        """
-        reg = re.compile(expr)
-
+        """Return minion and Resource IDs matching a regular expression."""
+        match = re.compile(expr).match
         if not minions:
             minions = self._pki_minions()
 
         return {
-            "minions": [m for m in minions if reg.match(m)],
+            "minions": self._append_matching_resources(
+                [m for m in minions if match(m)], match
+            ),
             "missing": [],
         }
+
+    def _append_matching_resources(self, minion_ids, predicate):
+        try:
+            resources = self.registry.match_resource_ids(predicate)
+        except Exception:  # pylint: disable=broad-except
+            log.debug("Resource ID matching failed", exc_info=True)
+            return minion_ids
+        return list(dict.fromkeys([*minion_ids, *resources]))
+
+    def get_resource_owners(self, target_ids, target=None, target_type=None):
+        """Snapshot the unambiguous Resource assignments for a publication."""
+        owners = {}
+        qualified = {}
+        if (
+            target_type == "compound"
+            and isinstance(target, str)
+            and target.startswith("T@")
+            and len(target.split()) == 1
+        ):
+            qualified = salt.utils.resource_registry.parse_srn(target[2:])
+        try:
+            registry = self.registry
+            resource_types = (
+                (qualified["type"],)
+                if qualified.get("type")
+                else registry.resource_types()
+            )
+            if not resource_types:
+                return owners
+            for target_id in set(target_ids):
+                claims = [
+                    (rtype, managing[0])
+                    for rtype in resource_types
+                    if (
+                        managing := registry.get_managing_minions_for_srn(
+                            rtype, target_id
+                        )
+                    )
+                ]
+                if len(claims) > 1:
+                    log.warning(
+                        "Resource ID conflict for %s: registered under multiple types; "
+                        "skipping Resource dispatch",
+                        target_id,
+                    )
+                elif claims:
+                    owners[target_id] = claims[0]
+        except Exception:  # pylint: disable=broad-except
+            log.warning("Unable to resolve Resource publishing owners", exc_info=True)
+        return owners
+
+    def get_publish_topics(self, target_ids, resource_owners=None):
+        """Route published Resource IDs to their managing minions' topics."""
+        topics = dict.fromkeys(target_ids)
+        if resource_owners is None:
+            resource_owners = self.get_resource_owners(topics)
+        for target_id in tuple(topics):
+            if target_id in resource_owners:
+                topics[resource_owners[target_id][1]] = None
+        return list(topics)
 
     def _pki_minions(self):
         """
@@ -881,6 +941,19 @@ class CkMinions:
         )
         return result
 
+    def _resource_grain_types(self):
+        """Return types declared in master opts or registered by minions."""
+        try:
+            configured = salt.utils.resources.enabled_resource_types(self.opts)
+        except Exception:  # pylint: disable=broad-except
+            configured = []
+        try:
+            registered = self.registry.resource_types()
+        except Exception:  # pylint: disable=broad-except
+            log.debug("Unable to read registered Resource types", exc_info=True)
+            registered = ()
+        return tuple(dict.fromkeys([*configured, *registered]))
+
     def _augment_grain_match_with_resource_grains(
         self, result, expr, delimiter, regex_match
     ):
@@ -917,15 +990,12 @@ class CkMinions:
         # Literal-exact fast path for ``resource_id:<literal-id>`` targets
         # (no wildcards, no delimiter nesting, non-regex). The master
         # enforces ``bank-key == "<rtype>:<rid>"`` at register time, so an
-        # ``O(T)`` hash probe across the configured resource types is the
+        # ``O(T)`` hash probe across known resource types is the
         # authoritative answer -- no need to list the bank (which is the
         # ~O(bank-size) step we are avoiding).
         if not regex_match and _is_resource_id_literal_predicate(expr, delimiter):
             _, _, literal = expr.partition(delimiter)
-            try:
-                rtypes = salt.utils.resources.enabled_resource_types(self.opts)
-            except Exception:  # pylint: disable=broad-except
-                rtypes = []
+            rtypes = self._resource_grain_types()
             for rtype in rtypes:
                 try:
                     hit = self.cache.contains(bank, f"{rtype}:{literal}")
@@ -972,10 +1042,7 @@ class CkMinions:
                 # intersect per rtype so each binary-search range only
                 # covers one type-scoped stride. For a bank with K rtypes
                 # and N keys total, this is O(K * log N + matches).
-                try:
-                    rtypes = salt.utils.resources.enabled_resource_types(self.opts)
-                except Exception:  # pylint: disable=broad-except
-                    rtypes = []
+                rtypes = self._resource_grain_types()
                 if rtypes:
                     for rtype in rtypes:
                         scoped = f"{rtype}:{id_prefix}"
@@ -1192,19 +1259,29 @@ class CkMinions:
             log.error("Compound target that is neither string, list nor tuple")
             return {"minions": [], "missing": []}
 
-        # we wrap this in a dict so we can assign to it from within the eval at
-        # the end of this method
-        _deferred_minions_scope = {"minions": minions}
+        words = expr.split() if isinstance(expr, str) else list(expr)
+        nodegroups = self.opts.get("nodegroups", {})
+        words = [
+            term
+            for word in words
+            for term in (
+                nodegroup_comp(word[2:], nodegroups) or []
+                if word.startswith("N@")
+                else [word]
+            )
+        ]
+        targets_resources = compound_targets_resources(words)
+        universe = None
 
         def _deferred_minions():
-            if not _deferred_minions_scope["minions"]:
-                _deferred_minions_scope["minions"] = self._pki_minions()
-
-            return _deferred_minions_scope["minions"]
+            nonlocal universe
+            if universe is None:
+                universe = minions or self._pki_minions()
+                if targets_resources:
+                    universe = self._append_matching_resources(universe, lambda _: True)
+            return universe
 
         log.debug("expr: %s, delimiter: %s, minions: %s", expr, delimiter, minions)
-
-        nodegroups = self.opts.get("nodegroups", {})
 
         if self.opts.get("minion_data_cache", False):
             ref = {
@@ -1228,12 +1305,6 @@ class CkMinions:
             unmatched = []
             opers = ["and", "or", "not", "(", ")"]
             missing = []
-
-            if isinstance(expr, str):
-                words = expr.split()
-            else:
-                # we make a shallow copy in order to not affect the passed in arg
-                words = expr[:]
 
             while words:
                 word = words.pop(0)
@@ -1292,13 +1363,6 @@ class CkMinions:
                             return {"minions": [], "missing": []}
 
                 elif target_info and target_info["engine"]:
-                    if "N" == target_info["engine"]:
-                        # if we encounter a node group, just evaluate it in-place
-                        decomposed = nodegroup_comp(target_info["pattern"], nodegroups)
-                        if decomposed:
-                            words = decomposed + words
-                        continue
-
                     engine = ref.get(target_info["engine"])
                     if not engine:
                         # If an unknown engine is called at any time, fail out
@@ -1319,14 +1383,9 @@ class CkMinions:
                     # a 'not'
                     if "L" == target_info["engine"]:
                         engine_args.append(results and results[-1] == "-")
-                    # Resource-engine matchers need the function name so that
-                    # merge-mode functions (state.apply etc.) wait for the
-                    # managing minion's combined response instead of the
-                    # individual resource ids that never produce a separate
-                    # return.
                     engine_kwargs = {"minions": minions}
-                    if target_info["engine"] == "T":
-                        engine_kwargs["fun"] = fun
+                    if target_info["engine"] == "M":
+                        engine_kwargs["include_resources"] = targets_resources
                     _results = engine(*engine_args, **engine_kwargs)
                     results.append(str(set(_results["minions"])))
                     missing.extend(_results["missing"])
@@ -1335,7 +1394,9 @@ class CkMinions:
                         unmatched.pop()
 
                 else:
-                    _results = self._check_glob_minions(word, True, minions=minions)
+                    _results = self._check_glob_minions(
+                        word, True, minions=minions, expand_managers=False
+                    )
                     results.append(str(set(_results["minions"])))
                     if unmatched and unmatched[-1] == "-":
                         results.append(")")
@@ -1352,7 +1413,6 @@ class CkMinions:
                         results,
                         {
                             "all_minions": _deferred_minions,
-                            "_deferred_minions_scope": _deferred_minions_scope,
                         },
                     )
                 )  # pylint: disable=W0123
@@ -1361,7 +1421,7 @@ class CkMinions:
                 log.error("Invalid compound target: %s", expr)
                 return {"minions": [], "missing": []}
 
-        return {"minions": list(minions), "missing": []}
+        return {"minions": list(minions or ()), "missing": []}
 
     def connected_ids(self, subset=None, show_ip=False):
         """
@@ -1473,31 +1533,18 @@ class CkMinions:
 
         return {"minions": minions, "missing": []}
 
-    def _check_resource_minions(self, expr, greedy, minions=None, fun=None):
+    def _check_resource_minions(
+        self, expr, greedy, minions=None, fun=None
+    ):  # pylint: disable=unused-argument
         """
         Return the IDs that match the ``T@`` pattern ``expr``.
 
         ``expr`` is either a bare resource type (``dummy``) or a full SRN
         (``dummy:dummy-01``).
 
-        Normally (and historically) the returned IDs are **resource IDs**:
-        the CLI uses this list to know which return IDs to expect, and
-        resource returns are keyed by resource ID (remapped by the master's
-        ``_return`` handler after the transport security check passes).
-
-        For merge-mode functions (``state.apply``, ``state.highstate``,
-        ``state.sls``, ``state.sls_id``, ``state.single``) the managing
-        minion runs every targeted resource inline and returns ONE combined
-        response under its own minion id — no per-resource ``_return`` is
-        ever emitted, so waiting on resource ids would time out with
-        ``ERROR: Minion did not return``. When ``fun`` is in
-        :data:`_MERGE_RESOURCE_FUNS` we therefore remap the wait list to
-        the managing minion id(s) of the targeted resources.
-
-        Job delivery is handled separately: the job is published with the
-        original ``T@`` target expression and ``tgt_type=compound``; managing
-        minions receive it via broadcast and filter locally with
-        ``resource_match.match()``.
+        The CLI waits for the matched resource IDs, including for inline state
+        jobs, which emit separate returns for each resource. The original
+        compound expression is broadcast and evaluated locally by each minion.
 
         Backed by :class:`ResourceRegistry`: full-SRN lookups are O(1) on
         the mmap primary; bare-type lookups are O(k) on the derived
@@ -1588,14 +1635,14 @@ class CkMinions:
                         seen.add(rid)
         return result
 
-    def _check_managing_minion_minions(self, expr, greedy, minions=None):
-        """
-        Return the minion set for a ``M@`` managing-minion expression.
-
-        ``expr`` is a minion ID glob.  Returns any accepted minion whose ID
-        matches ``expr``.
-        """
-        return self._check_glob_minions(expr, greedy, minions=minions)
+    def _check_managing_minion_minions(
+        self, expr, greedy, minions=None, include_resources=False
+    ):  # pylint: disable=unused-argument
+        """Match an exact managing minion ID and optionally its Resource IDs."""
+        matched = [expr] if expr in (minions or self._pki_minions()) else []
+        if include_resources:
+            matched = self._augment_with_resources(matched)
+        return {"minions": matched, "missing": []}
 
     def check_minions(
         self,
@@ -1632,23 +1679,6 @@ class CkMinions:
                 # pylint: enable=not-callable
             else:
                 _res = check_func(expr, greedy)  # pylint: disable=not-callable
-            # For wildcard glob targets (e.g. ``salt '*'``), include resource
-            # IDs managed by matched minions so that the master keeps its
-            # response window open long enough to receive resource results.
-            # Specific name targets (e.g. ``salt 'minion'``) are intentionally
-            # NOT augmented — targeting a minion by name should not implicitly
-            # include its resources.
-            # Compound targets handle resource matching explicitly via T@/M@.
-            # Merge-mode functions (state.apply etc.) run resources inline on
-            # the managing minion and return ONE combined response, so the
-            # master must NOT add separate resource IDs to its wait-list.
-            if (
-                tgt_type == "glob"
-                and isinstance(expr, str)
-                and any(c in expr for c in ("*", "?", "["))
-                and not (isinstance(fun, str) and fun in _MERGE_RESOURCE_FUNS)
-            ):
-                _res["minions"] = self._augment_with_resources(_res["minions"])
             _res["ssh_minions"] = False
             if self.opts.get("enable_ssh_minions", False) is True and isinstance(
                 "tgt", str
