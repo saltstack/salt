@@ -9,6 +9,7 @@ import asyncio
 import asyncio.exceptions
 import errno
 import inspect
+import ipaddress
 import logging
 import multiprocessing
 import os
@@ -1085,6 +1086,25 @@ class LoadBalancerWorker(SaltMessageServer):
             pass
 
 
+def _tls_server_name(opts):
+    """
+    The name a minion checks the master's certificate against: the configured
+    ``master`` when it is a host name. The minion connects to the address it
+    resolved, and without this the certificate is checked against that
+    address. Returns None for anything else, which keeps the address check.
+    """
+    if opts.get("__role") != "minion":
+        return None
+    name = opts.get("master")
+    if not isinstance(name, str) or not name:
+        return None
+    try:
+        ipaddress.ip_address(name.strip("[]"))
+    except ValueError:
+        return name
+    return None
+
+
 class TCPClientKeepAlive(tornado.tcpclient.TCPClient):
     """
     Override _create_stream() in TCPClient to enable keep alive support.
@@ -1093,6 +1113,23 @@ class TCPClientKeepAlive(tornado.tcpclient.TCPClient):
     def __init__(self, opts, resolver=None):
         self.opts = opts
         super().__init__(resolver=resolver)
+
+    async def connect(
+        self, host, port, *args, ssl_options=None, **kwargs
+    ):  # pylint: disable=arguments-differ
+        """
+        Check the server certificate against the minion's configured master
+        name instead of the address it connects to.
+        """
+        server_name = _tls_server_name(self.opts) if ssl_options else None
+        if server_name is None:
+            return await super().connect(
+                host, port, *args, ssl_options=ssl_options, **kwargs
+            )
+        stream = await super().connect(host, port, *args, **kwargs)
+        return await stream.start_tls(
+            False, ssl_options=ssl_options, server_hostname=server_name
+        )
 
     def _create_stream(
         self, max_buffer_size, af, addr, **kwargs
