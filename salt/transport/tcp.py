@@ -13,6 +13,7 @@ import logging
 import multiprocessing
 import os
 import queue
+import random
 import socket
 import ssl
 import struct
@@ -337,7 +338,21 @@ class PublishClient(salt.transport.base.PublishClient):
         self._closing = False
         self._stream = None
         self._closed = False
-        self.backoff = opts.get("tcp_reconnect_backoff", 1)
+        self.backoff = opts.get("recon_default", 1000) / 1000
+        tcp_backoff = opts.get("tcp_reconnect_backoff", 1)
+        if tcp_backoff != 1:
+            # ``tcp_reconnect_backoff`` (seconds) remains the TCP-specific
+            # override of ``recon_default`` (milliseconds) when configured
+            # to a non-default value.
+            self.backoff = tcp_backoff
+        self.recon_max = opts.get("recon_max", 10000) / 1000
+        self.recon_randomize = opts.get("recon_randomize", True)
+        self._recon_initial = (
+            random.uniform(self.backoff, self.backoff + self.recon_max)
+            if self.recon_randomize
+            else self.backoff
+        )
+        self._recon_delay = self._recon_initial
         self.resolver = kwargs.get("resolver")
         self._read_in_progress = asyncio.Lock()
         # Persistent read task. Kept across recv() calls so a timed-out
@@ -421,6 +436,20 @@ class PublishClient(salt.transport.base.PublishClient):
             self._tcp_client = None
         self._closed = True
 
+    def _reconnect_wait(self):
+        """
+        Return the delay before the next reconnect attempt.
+
+        Mirrors the ZeroMQ transport's backoff (``recon_default`` /
+        ``recon_max`` / ``recon_randomize``): the wait doubles after each
+        failure in a row up to ``recon_max`` seconds, and the sequence
+        starts over at ``self._recon_initial`` after a connection
+        succeeds.
+        """
+        delay = self._recon_delay
+        self._recon_delay = min(delay * 2, max(self.recon_max, self._recon_initial))
+        return delay
+
     async def getstream(self, **kwargs):
         if self.source_ip or self.source_port:
             kwargs.update(source_ip=self.source_ip, source_port=self.source_port)
@@ -457,6 +486,9 @@ class PublishClient(salt.transport.base.PublishClient):
                         if stream.closed():
                             log.debug("TCP stream closed after SSL handshake")
                             stream = None
+                            if timeout and time.monotonic() - start > timeout:
+                                break
+                            await asyncio.sleep(self._reconnect_wait())
                             continue
                     _cap_stream_write_buffer(stream, self.opts)
                     self.unpacker = salt.utils.msgpack.Unpacker()
@@ -480,19 +512,22 @@ class PublishClient(salt.transport.base.PublishClient):
                     _connect_to = self.path
                 else:
                     _connect_to = f"{self.host}:{self.port}"
+                delay = self._reconnect_wait()
                 log.debug(
                     "%s encountered an exception while connecting to"
-                    " %s: %r, will reconnect in %d seconds",
+                    " %s: %r, will reconnect in %.1f seconds",
                     self,
                     _connect_to,
                     exc,
-                    self.backoff,
+                    delay,
                 )
                 if timeout and time.monotonic() - start > timeout:
                     break
-                await asyncio.sleep(self.backoff)
+                await asyncio.sleep(delay)
             if timeout and time.monotonic() - start > timeout:
                 break
+        if stream is not None:
+            self._recon_delay = self._recon_initial
         return stream
 
     async def _connect(self, timeout=None):
@@ -2756,8 +2791,36 @@ class RequestClient(salt.transport.base.RequestClient):
         self._connect_task = None
         self.disconnect_callback = _null_callback
         self.connect_callback = _null_callback
-        self.backoff = opts.get("tcp_reconnect_backoff", 1)
+        self.backoff = opts.get("recon_default", 1000) / 1000
+        tcp_backoff = opts.get("tcp_reconnect_backoff", 1)
+        if tcp_backoff != 1:
+            # ``tcp_reconnect_backoff`` (seconds) remains the TCP-specific
+            # override of ``recon_default`` (milliseconds) when configured
+            # to a non-default value.
+            self.backoff = tcp_backoff
+        self.recon_max = opts.get("recon_max", 10000) / 1000
+        self.recon_randomize = opts.get("recon_randomize", True)
+        self._recon_initial = (
+            random.uniform(self.backoff, self.backoff + self.recon_max)
+            if self.recon_randomize
+            else self.backoff
+        )
+        self._recon_delay = self._recon_initial
         self.ssl = self.opts.get("ssl", None)
+
+    def _reconnect_wait(self):
+        """
+        Return the delay before the next reconnect attempt.
+
+        Mirrors the ZeroMQ transport's backoff (``recon_default`` /
+        ``recon_max`` / ``recon_randomize``): the wait doubles after each
+        failure in a row up to ``recon_max`` seconds, and the sequence
+        starts over at ``self._recon_initial`` after a connection
+        succeeds.
+        """
+        delay = self._recon_delay
+        self._recon_delay = min(delay * 2, max(self.recon_max, self._recon_initial))
+        return delay
 
     async def getstream(self, **kwargs):
         if self.source_ip or self.source_port:
@@ -2788,15 +2851,18 @@ class RequestClient(salt.transport.base.RequestClient):
                 # An ipc stream exists before it connects. Retry instead of
                 # returning it closed.
                 stream = None
+                delay = self._reconnect_wait()
                 log.warning(
                     "TCP Message Client encountered an exception while connecting to"
-                    " %s:%s: %r, will reconnect in %d seconds",
+                    " %s:%s: %r, will reconnect in %.1f seconds",
                     self.host,
                     self.port,
                     exc,
-                    self.backoff,
+                    delay,
                 )
-                await asyncio.sleep(self.backoff)
+                await asyncio.sleep(delay)
+        if stream is not None:
+            self._recon_delay = self._recon_initial
         return stream
 
     async def connect(self):  # pylint: disable=invalid-overridden-method
