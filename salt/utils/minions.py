@@ -736,21 +736,56 @@ class CkMinions:
             return minion_ids
         return list(dict.fromkeys([*minion_ids, *resources]))
 
-    def get_publish_topics(self, target_ids):
-        """Route published Resource IDs to their managing minions' topics."""
-        topics = dict.fromkeys(target_ids)
+    def get_resource_owners(self, target_ids, target=None, target_type=None):
+        """Snapshot the unambiguous Resource assignments for a publication."""
+        owners = {}
+        qualified = {}
+        if (
+            target_type == "compound"
+            and isinstance(target, str)
+            and target.startswith("T@")
+            and len(target.split()) == 1
+        ):
+            qualified = salt.utils.resource_registry.parse_srn(target[2:])
         try:
             registry = self.registry
-            for target_id in tuple(topics):
-                for resource_type, resource_id in registry.resolve_bare_resource_id(
-                    target_id
-                ):
-                    for owner in registry.get_managing_minions_for_srn(
-                        resource_type, resource_id
-                    ):
-                        topics[owner] = None
+            resource_types = (
+                (qualified["type"],)
+                if qualified.get("type")
+                else registry.resource_types()
+            )
+            if not resource_types:
+                return owners
+            for target_id in set(target_ids):
+                claims = [
+                    (rtype, managing[0])
+                    for rtype in resource_types
+                    if (
+                        managing := registry.get_managing_minions_for_srn(
+                            rtype, target_id
+                        )
+                    )
+                ]
+                if len(claims) > 1:
+                    log.warning(
+                        "Resource ID conflict for %s: registered under multiple types; "
+                        "skipping Resource dispatch",
+                        target_id,
+                    )
+                elif claims:
+                    owners[target_id] = claims[0]
         except Exception:  # pylint: disable=broad-except
-            log.warning("Unable to resolve Resource publishing topics", exc_info=True)
+            log.warning("Unable to resolve Resource publishing owners", exc_info=True)
+        return owners
+
+    def get_publish_topics(self, target_ids, resource_owners=None):
+        """Route published Resource IDs to their managing minions' topics."""
+        topics = dict.fromkeys(target_ids)
+        if resource_owners is None:
+            resource_owners = self.get_resource_owners(topics)
+        for target_id in tuple(topics):
+            if target_id in resource_owners:
+                topics[resource_owners[target_id][1]] = None
         return list(topics)
 
     def _pki_minions(self):

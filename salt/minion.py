@@ -6074,6 +6074,16 @@ class Minion(MinionBase):
             minion_matches = self.matchers["glob_match.match"](load["tgt"])
 
         resource_targets = self._resolve_resource_targets(load)
+        # Consume the snapshot here so fan-out does not copy it into
+        # every individual Resource job.
+        owners = load.pop("resource_owners", None)
+        if owners is not None:
+            resource_targets = [
+                resource
+                for resource in resource_targets
+                if tuple(owners.get(resource["id"], ()))
+                == (resource["type"], self.opts["id"])
+            ]
         load["resource_targets"] = resource_targets
         # For pure resource targets (e.g. ``T@dummy:dummy-01`` or a bare
         # resource id glob like ``salt 'dummy-01' state.single``) the

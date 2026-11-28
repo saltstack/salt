@@ -1835,7 +1835,9 @@ class PubServerChannel:
                 )["minions"]
             # The encrypted target remains the original expression. Only the
             # transport topics gain the managers that can dispatch it locally.
-            topics = self.ckminions.get_publish_topics(topics)
+            topics = self.ckminions.get_publish_topics(
+                topics, load.get("resource_owners")
+            )
             log.debug("Publish Side Match: %s", topics)
             int_payload["topic_lst"] = topics
 

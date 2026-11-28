@@ -69,6 +69,18 @@ to match resources managed by that minion::
 
 By itself, ``M@minion-1`` matches the managing minion.
 
+Resource ownership
+------------------
+
+A resource's type and ID identify its registered owner. If another minion
+claims the same type and ID, the master logs the conflict and keeps the
+existing owner. Remove the resource from that minion's inventory and
+refresh registration before moving it to a new managing minion.
+
+Use unique bare IDs for devices you address without a type. If a bare ID
+is used by multiple resource types, use a single ``T@<type>:<id>``
+selector. Publications without a clear type skip ambiguous Resource IDs.
+
 Grain-based ``-G`` / ``G@``
 ---------------------------
 

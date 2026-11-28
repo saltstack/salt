@@ -2,6 +2,7 @@
 Unit tests for :mod:`salt.utils.resource_registry`.
 """
 
+import concurrent.futures
 import contextlib
 import threading
 
@@ -612,6 +613,42 @@ def test_register_minion_chunk_pending_ttl_does_not_evict_active_window(tmp_path
         assert _time.monotonic() - state["last_activity_ts"] < 1.0
     finally:
         registry.close()
+
+
+def test_duplicate_claim_keeps_the_owner_until_release(registry, caplog):
+    resources = {"dummy": ["firewall-a"]}
+    assert registry.register_minion("manager-a", resources) == (1, 0)
+    assert registry.register_minion_chunk(
+        "manager-b", resources, True, chunk_scope="dummy", chunk_index=0
+    ) == (0, 0)
+    assert registry.get_managing_minions_for_srn("dummy", "firewall-a") == ["manager-a"]
+    assert "Resource ID conflict for dummy:firewall-a" in caplog.text
+    assert "rejecting registration from manager-b" in caplog.text
+
+    assert registry.unregister_minion("manager-a") == 1
+    assert registry.register_minion("manager-b", resources) == (1, 0)
+    assert registry.get_managing_minions_for_srn("dummy", "firewall-a") == ["manager-b"]
+
+
+def test_concurrent_claims_allow_one_owner(tmp_path):
+    opts = {
+        "cachedir": str(tmp_path),
+        "resource_index_primary_capacity": _TEST_PRIMARY_CAPACITY,
+        "resource_index_primary_slot_size": _TEST_PRIMARY_SLOT_SIZE,
+    }
+    barrier = threading.Barrier(2)
+
+    def register(manager):
+        with contextlib.closing(
+            rr.ResourceRegistry(opts, cache=_FakeCache())
+        ) as registry:
+            barrier.wait(timeout=5)
+            count, _ = registry.register_minion(manager, {"dummy": ["firewall-a"]})
+            return count
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        counts = list(executor.map(register, ("minion-a", "minion-b")))
+    assert sorted(counts) == [0, 1]
 
 
 def test_cross_type_collisions_are_not_ambiguous(registry):

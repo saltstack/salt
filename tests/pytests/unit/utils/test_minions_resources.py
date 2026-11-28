@@ -432,6 +432,18 @@ def test_publish_topics_include_resource_owners_without_changing_target_ids(opts
     assert targets == ["a1", "ordinary-minion", "a2"]
 
 
+def test_ambiguous_bare_id_requires_a_resource_type(opts, caplog):
+    update_resource_index(opts, "minion-a", {"dummy": ["firewall-a"]})
+    update_resource_index(opts, "minion-b", {"ssh": ["firewall-a"]})
+    ck = salt.utils.minions.CkMinions(opts)
+
+    assert ck.get_resource_owners(["firewall-a"]) == {}
+    assert "Resource ID conflict for firewall-a" in caplog.text
+    assert ck.get_resource_owners(["firewall-a"], "T@ssh:firewall-a", "compound") == {
+        "firewall-a": ("ssh", "minion-b")
+    }
+
+
 def test_registry_resolve_bare_resource_id(populated_registry):
     assert populated_registry.resolve_bare_resource_id("dummy-02") == [
         ("dummy", "dummy-02")
