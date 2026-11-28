@@ -3627,6 +3627,12 @@ class Minion(MinionBase):
 
         fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
 
+        resource_target = data.get("resource_target")
+        resource_token = (
+            salt.utils.ctx.resource_ctxvar.set(resource_target)
+            if resource_target
+            else None
+        )
         try:
             if opts.get("multiprocessing", True):
                 salt.utils.process.appendproctitle(f"{cls.__name__}._thread_return")
@@ -3661,7 +3667,6 @@ class Minion(MinionBase):
             # precedence over the managing minion's own modules.
             # Unknown functions for a resource type fail loudly rather than
             # silently falling through to execute on the managing minion.
-            resource_target = data.get("resource_target")
             if resource_target:
                 resource_type = resource_target["type"]
                 functions_to_use = generation.resource_loaders.get(resource_type)
@@ -3673,15 +3678,6 @@ class Minion(MinionBase):
                     )
                     ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
                 else:
-                    # Set the per-call resource context via resource_ctxvar.
-                    # contextvars are per-thread, so this value is invisible
-                    # to other threads.  LazyLoader.run() calls copy_context()
-                    # fresh on every invocation, capturing this value in the
-                    # snapshot before _run_as executes — fully isolated from
-                    # concurrent resource jobs sharing the same loader object.
-                    import salt.loader.context as _loader_ctx
-
-                    _loader_ctx.resource_ctxvar.set(resource_target)
                     grains_fn = f"{resource_type}.grains"
                     if grains_fn in minion_instance.resource_funcs:
                         functions_to_use.pack["__grains__"] = (
@@ -3816,7 +3812,10 @@ class Minion(MinionBase):
                     ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
                 except Exception:  # pylint: disable=broad-except
                     msg = "The minion function caused an exception"
-                    log.warning(msg, exc_info_on_loglevel=True)
+                    if resource_target:
+                        log.warning(msg, exc_info=True)
+                    else:
+                        log.warning(msg, exc_info_on_loglevel=True)
                     salt.utils.error.fire_exception(
                         salt.exceptions.MinionError(msg), opts, job=data
                     )
@@ -4108,6 +4107,8 @@ class Minion(MinionBase):
                             },
                         )
         finally:
+            if resource_token is not None:
+                salt.utils.ctx.resource_ctxvar.reset(resource_token)
             try:
                 os.remove(fn_)
             except OSError:

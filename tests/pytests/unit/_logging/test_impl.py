@@ -7,7 +7,12 @@ import logging
 
 import pytest
 
-from salt._logging.handlers import DeferredStreamHandler, StreamHandler
+import salt.utils.ctx
+from salt._logging.handlers import (
+    DeferredStreamHandler,
+    ResourceLogFileHandler,
+    StreamHandler,
+)
 from salt._logging.impl import (
     SaltColorLogRecord,
     SaltLogRecord,
@@ -189,3 +194,43 @@ def test_makerecord_does_not_break_stack_info(collected_records):
     logger.info("with stack", stack_info=True)
     assert len(records) == 1
     assert records[0].stack_info
+
+
+def test_resource_attribution_is_captured_in_the_log_record(collected_records):
+    logger, records = collected_records
+    token = salt.utils.ctx.resource_ctxvar.set({"id": "switch%1", "type": "switch"})
+    try:
+        logger.warning(
+            "driver %s", "warning", extra={"resource_id": "external-driver-field"}
+        )
+    finally:
+        salt.utils.ctx.resource_ctxvar.reset(token)
+    logger.warning("ordinary warning")
+
+    resource_record, ordinary_record = records
+    assert resource_record.salt_resource_id == "switch%1"
+    assert resource_record.salt_resource_type == "switch"
+    assert resource_record.resource_id == "external-driver-field"
+    assert resource_record.getMessage() == "[resource_id='switch%1'] driver warning"
+    assert ordinary_record.getMessage() == "ordinary warning"
+
+
+def test_resource_file_handler_falls_back_if_destination_is_unavailable(tmp_path):
+    fallback_stream = io.StringIO()
+    fallback = StreamHandler(fallback_stream)
+    handler = ResourceLogFileHandler(
+        fallback, {"switch:sw01": tmp_path / "missing-directory" / "sw01.log"}
+    )
+    token = salt.utils.ctx.resource_ctxvar.set({"id": "sw01", "type": "switch"})
+    try:
+        record = SaltLogRecord(
+            "driver", logging.WARNING, __file__, 1, "driver log", (), None
+        )
+    finally:
+        salt.utils.ctx.resource_ctxvar.reset(token)
+
+    try:
+        handler.handle(record)
+        assert fallback_stream.getvalue() == "[resource_id='sw01'] driver log\n"
+    finally:
+        handler.close()

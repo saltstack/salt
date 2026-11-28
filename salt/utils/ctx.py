@@ -1,4 +1,5 @@
 import contextlib
+from types import MappingProxyType
 
 try:
     # Try the stdlib C extension first
@@ -9,6 +10,7 @@ except ImportError:
 
 DEFAULT_CTX_VAR = "request_ctxvar"
 request_ctxvar = contextvars.ContextVar(DEFAULT_CTX_VAR)
+resource_ctxvar = contextvars.ContextVar("__resource__", default=MappingProxyType({}))
 
 
 @contextlib.contextmanager

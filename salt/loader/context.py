@@ -14,18 +14,12 @@ except ImportError:
     import contextvars
 
 import salt.exceptions
+import salt.utils.ctx
 
 DEFAULT_CTX_VAR = "loader_ctxvar"
 
 loader_ctxvar = contextvars.ContextVar(DEFAULT_CTX_VAR)
-
-# Per-call resource context.  Set via resource_ctxvar.set() in
-# _thread_return before executing the job.  contextvars are per-thread: each
-# new thread inherits a copy of the parent's context, and set() only mutates
-# the current thread's copy.  LazyLoader.run() calls copy_context() fresh on
-# every invocation, so the snapshot it passes to _last_context.run() already
-# contains the value we set here — completely isolated from other threads.
-resource_ctxvar = contextvars.ContextVar("__resource__", default={})
+resource_ctxvar = salt.utils.ctx.resource_ctxvar
 
 
 @contextlib.contextmanager

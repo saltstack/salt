@@ -41,6 +41,33 @@ See :ref:`resources-authoring-pillar` for the pillar layout under this
 key.
 
 
+.. conf_minion:: resource_log_files
+
+``resource_log_files``
+----------------------
+
+Default ``{}``.
+
+Logs emitted while a Resource driver or execution module is running
+include its Resource ID. To route records to individual files, map each
+Resource's ``<type>:<id>`` identifier to an absolute path in the managing
+minion's configuration.
+
+.. code-block:: yaml
+
+    log_file: /var/log/salt/minion
+    resource_log_files:
+      "ssh:switch-01": /var/log/salt/switch-01.log
+      "ssh:switch-02": /var/log/salt/switch-02.log
+
+File output, including tracebacks, goes to the configured device file
+at the minion's file log level and format. General minion records,
+unconfigured Resources, and records whose device file is unavailable
+go to the minion's regular log. Console and other logging handlers
+continue to receive records. Use an external rotation tool such as
+``logrotate`` for the device files.
+
+
 Master options
 ==============
 

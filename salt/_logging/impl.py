@@ -16,6 +16,7 @@ import sys
 import traceback
 import types
 import urllib.parse
+from collections.abc import Mapping
 
 # Let's define these custom logging levels before importing the salt._logging.mixins
 # since they will be used there
@@ -28,12 +29,14 @@ import salt.defaults.exitcodes  # isort:skip  pylint: disable=unused-import
 import salt.utils.ctx
 
 from salt._logging.handlers import DeferredStreamHandler  # isort:skip
+from salt._logging.handlers import ResourceLogFileHandler  # isort:skip
 from salt._logging.handlers import RotatingFileHandler  # isort:skip
 from salt._logging.handlers import StreamHandler  # isort:skip
 from salt._logging.handlers import SysLogHandler  # isort:skip
 from salt._logging.handlers import WatchedFileHandler  # isort:skip
 from salt._logging.mixins import LoggingMixinMeta  # isort:skip
 from salt.exceptions import LoggingRuntimeError  # isort:skip
+from salt.exceptions import SaltSystemExit  # isort:skip
 from salt.utils.immutabletypes import freeze, ImmutableDict  # isort:skip
 from salt.utils.textformat import TextFormat  # isort:skip
 
@@ -110,6 +113,9 @@ DFLT_LOG_FMT_LOGFILE = "%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(lev
 class SaltLogRecord(logging.LogRecord):
     def __init__(self, *args, **kwargs):
         logging.LogRecord.__init__(self, *args, **kwargs)
+        resource = salt.utils.ctx.resource_ctxvar.get()
+        self.salt_resource_id = resource.get("id", "")
+        self.salt_resource_type = resource.get("type", "")
         self.bracketname = f"[{str(self.name):<17}]"
         self.bracketlevel = f"[{str(self.levelname):<8}]"
         self.bracketprocess = f"[{str(self.process):>5}]"
@@ -126,6 +132,12 @@ class SaltLogRecord(logging.LogRecord):
         self.colorlevel = self.bracketlevel
         self.colorprocess = self.bracketprocess
         self.colormsg = self.getMessage()
+
+    def getMessage(self):
+        message = super().getMessage()
+        if self.salt_resource_id:
+            return f"[resource_id={self.salt_resource_id!r}] {message}"
+        return message
 
 
 class SaltColorLogRecord(SaltLogRecord):
@@ -725,6 +737,7 @@ def setup_logfile_handler(
     max_bytes=0,
     backup_count=0,
     user=None,
+    resource_log_files=None,
 ):
     """
     Setup the log file handler
@@ -894,9 +907,58 @@ def setup_logfile_handler(
     formatter = logging.Formatter(log_format, datefmt=date_format)
 
     handler.setFormatter(formatter)
+    paths = _prepare_resource_log_files(
+        resource_log_files, getattr(handler, "baseFilename", None), user
+    )
+    if paths:
+        handler = ResourceLogFileHandler(handler, paths)
     logging.root.addHandler(handler)
 
     setup_logfile_handler.__handler__ = handler
+
+
+def _prepare_resource_log_files(config, main_log_file, user):
+    """Validate and prepare configured local Resource log destinations."""
+    if not config:
+        return {}
+    if not isinstance(config, Mapping):
+        log.warning("resource_log_files must map resource identifiers to paths")
+        return {}
+
+    import salt.utils.files
+    import salt.utils.user
+    import salt.utils.verify
+
+    paths = {}
+    used_paths = {os.path.realpath(main_log_file)} if main_log_file else set()
+    user = user or salt.utils.user.get_user()
+    for srn, path in config.items():
+        resource_type, _, resource_id = (
+            srn.partition(":") if isinstance(srn, str) else ("", "", "")
+        )
+        if (
+            not resource_type
+            or not resource_id
+            or not isinstance(path, str)
+            or not os.path.isabs(path)
+        ):
+            log.warning("Invalid resource log file entry for %r: %r", srn, path)
+            continue
+        try:
+            path = os.path.realpath(path)
+            if path in used_paths:
+                log.warning("Duplicate resource log file for %s: %s", srn, path)
+                continue
+            if os.path.exists(path) and not os.path.isfile(path):
+                raise OSError("log destination is not a regular file")
+            with salt.utils.files.set_umask(0o027):
+                salt.utils.verify.verify_log_files([path], user)
+        except (OSError, SaltSystemExit, ValueError) as exc:
+            log.warning("Unable to prepare resource log file for %s: %s", srn, exc)
+            continue
+        paths[srn] = path
+        used_paths.add(path)
+    return paths
 
 
 def get_extended_logging_handlers():
@@ -1036,6 +1098,7 @@ def setup_logging():
                 max_bytes=opts["log_rotate_max_bytes"],
                 backup_count=opts["log_rotate_backup_count"],
                 user=opts["user"],
+                resource_log_files=opts.get("resource_log_files"),
             )
         else:
             setup_logfile_handler.__handler__ = logging.NullHandler()

@@ -525,6 +525,7 @@ VALID_OPTS = immutabletypes.freeze(
         "tcp_master_workers": int,
         # The file to send logging data to
         "log_file": str,
+        "resource_log_files": dict,
         # The level of verbosity at which to log
         "log_level": str,
         # The log level to log to a given file
@@ -1493,6 +1494,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "tcp_authentication_retries": 5,
         "tcp_reconnect_backoff": 1,
         "log_file": os.path.join(salt.syspaths.LOGS_DIR, "minion"),
+        "resource_log_files": {},
         "log_level": "warning",
         "log_level_logfile": None,
         "log_datefmt": DFLT_LOG_DATEFMT,
