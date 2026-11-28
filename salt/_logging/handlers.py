@@ -7,6 +7,7 @@
 
 import logging
 import logging.handlers
+import os
 import sys
 from collections import deque
 
@@ -87,6 +88,56 @@ class FileHandler(ExcInfoOnLogLevelFormatMixin, logging.FileHandler):
     """
     File handler which properly handles exc_info on a per handler basis
     """
+
+
+class ResourceLogFileHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler):
+    """Write configured Resource records to their files and preserve a fallback."""
+
+    def __init__(self, fallback, paths):
+        super().__init__(fallback.level)
+        self.fallback = fallback
+        self.paths = paths
+        self.setFormatter(fallback.formatter)
+
+    @staticmethod
+    def _open(path, flags):
+        return os.open(path, flags, 0o640)
+
+    def emit(self, record):
+        resource_id = getattr(record, "salt_resource_id", "")
+        resource_type = getattr(record, "salt_resource_type", "")
+        path = self.paths.get(f"{resource_type}:{resource_id}")
+        if path is not None:
+            try:
+                import salt.utils.files
+
+                message = self.format(record)
+                # Keep no per-device descriptors open and follow external rotation.
+                with salt.utils.files.fopen(
+                    path,
+                    "a",
+                    encoding="utf-8",
+                    errors="backslashreplace",
+                    opener=self._open,
+                ) as stream:
+                    stream.write(message + "\n")
+                return
+            except OSError:
+                # Preserve the record in the minion log if the file is unavailable.
+                pass
+            except Exception:  # pylint: disable=broad-except
+                self.handleError(record)
+                return
+        self.fallback.handle(record)
+
+    def flush(self):
+        self.fallback.flush()
+
+    def close(self):
+        try:
+            self.fallback.close()
+        finally:
+            super().close()
 
 
 class SysLogHandler(ExcInfoOnLogLevelFormatMixin, logging.handlers.SysLogHandler):
