@@ -116,6 +116,21 @@ def test_glob_wildcard_minion_pattern_includes_resources(salt_minion, salt_cli):
         assert data[rid] is True
 
 
+@pytest.mark.parametrize("compound", [False, True], ids=["exact", "compound"])
+def test_selecting_managing_minion_only_returns_that_minion(
+    salt_minion, salt_cli, compound
+):
+    target = salt_minion.id
+    args = ("test.ping",)
+    if compound:
+        target = target[:-1] + "?"
+        args = ("-C", *args)
+
+    ret = salt_cli.run(*args, minion_tgt=target)
+    assert ret.returncode == 0, ret
+    assert _salt_cli_json_dict(ret) == {salt_minion.id: True}
+
+
 def test_T_at_full_srn_returns_only_that_resource(salt_minion, salt_cli):
     """
     ``salt -C 'T@dummy:<id>' test.ping`` must return a response keyed to

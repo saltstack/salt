@@ -363,7 +363,19 @@ def test_augment_with_resources_registry_error_returns_minion_ids(ck):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("fun", [None, "test.ping", "state.apply"])
+@pytest.mark.parametrize(
+    "fun",
+    [
+        None,
+        "test.ping",
+        ["test.arg", "test.arg"],
+        "state.apply",
+        "state.highstate",
+        "state.sls",
+        "state.sls_id",
+        "state.single",
+    ],
+)
 def test_check_minions_glob_wildcard_augmented(ck_with_resources, fun):
     with patch.object(
         ck_with_resources.key, "glob_match", return_value={"minions": ["minion"]}
@@ -377,6 +389,27 @@ def test_check_minions_glob_wildcard_augmented(ck_with_resources, fun):
         "node1",
         "localhost",
     }
+
+
+@pytest.mark.parametrize(
+    "target,target_type",
+    [
+        ("minion", "glob"),
+        ("mini* and G@os:Debian", "compound"),
+    ],
+)
+def test_check_minions_does_not_expand_managing_minion(
+    ck_with_resources, target, target_type
+):
+    with patch.object(
+        ck_with_resources.key, "glob_match", return_value={"minions": ["minion"]}
+    ), patch.object(
+        ck_with_resources,
+        "_check_grain_minions",
+        return_value={"minions": ["minion", "dummy-01"], "missing": []},
+    ):
+        result = ck_with_resources.check_minions(target, tgt_type=target_type)
+    assert result["minions"] == ["minion"]
 
 
 def test_augment_registry_error_does_not_break_check_minions(ck):
