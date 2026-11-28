@@ -6,6 +6,7 @@ import tornado.gen
 
 import salt.crypt as crypt
 import salt.exceptions
+import salt.utils.crypt
 from tests.conftest import FIPS_TESTRUN
 from tests.support.mock import mock_open, patch
 
@@ -1657,3 +1658,147 @@ def test_publickey_encrypt_accepts_bytes_and_str(_rsa_keypair, data):
         priv.decrypt(pub.encrypt(data, algorithm=algorithm), algorithm=algorithm)
         == expected
     )
+
+
+@pytest.fixture
+def pinned_auth(minion_root, io_loop, _clear_pub_key_cache):
+    """
+    An AsyncAuth for a minion with no stored master key, plus the public keys
+    of a pinned master and of another master.
+
+    https://github.com/saltstack/salt/issues/70981
+    """
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 2048,
+        "acceptance_wait_time": 60,
+        "acceptance_wait_time_max": 60,
+        "keys.cache_driver": "localfs_key",
+        "open_mode": False,
+        "verify_master_pubkey_sign": False,
+        "always_verify_signature": False,
+        "hash_type": "sha256",
+        "encryption_algorithm": _fips_safe_oaep_algorithm(),
+        "signing_algorithm": _fips_safe_sig_algorithm(),
+    }
+    crypt.write_keys(str(pki_dir), "minion", opts["keysize"])
+    pinned_pub = crypt.gen_keys(2048)[1]
+    other_pub = crypt.gen_keys(2048)[1]
+    opts["master_finger"] = salt.utils.crypt.pem_finger(
+        key=pinned_pub, sum_type="sha256"
+    )
+    auth = crypt.AsyncAuth(opts, io_loop)
+    return {
+        "auth": auth,
+        "m_pub_fn": pki_dir / auth.mpub,
+        "pinned_pub": pinned_pub,
+        "other_pub": other_pub,
+    }
+
+
+def _first_contact(auth, pub_key):
+    payload = {"enc": "pub", "pub_key": pub_key, "aes": "ignored"}
+    with patch.object(auth, "extract_aes", return_value="aes-key"):
+        return auth.verify_master(payload, master_pub=False)
+
+
+def test_verify_master_does_not_store_key_failing_master_finger(pinned_auth):
+    """
+    A master key that fails ``master_finger`` on first contact is refused
+    before it is written to ``minion_master.pub``.
+    """
+    with pytest.raises(SystemExit) as exc:
+        _first_contact(pinned_auth["auth"], pinned_auth["other_pub"])
+    assert exc.value.code == 42
+    assert not pinned_auth["m_pub_fn"].exists()
+
+
+@pytest.mark.parametrize("linesep", ["\n", "\r\n"])
+def test_verify_master_stores_key_matching_master_finger(pinned_auth, linesep):
+    """
+    A master key that matches ``master_finger`` on first contact is stored,
+    whatever line endings the master sent it with.
+    """
+    pub_key = pinned_auth["pinned_pub"].replace("\n", linesep) + linesep
+    assert _first_contact(pinned_auth["auth"], pub_key) == "aes-key"
+    m_pub_fn = pinned_auth["m_pub_fn"]
+    assert m_pub_fn.read_text() == crypt.clean_key(pinned_auth["pinned_pub"])
+    assert (
+        salt.utils.crypt.pem_finger(str(m_pub_fn), sum_type="sha256")
+        == pinned_auth["auth"].opts["master_finger"]
+    )
+
+
+def test_verify_master_checks_syndic_finger(pinned_auth):
+    """
+    A syndic checks ``syndic_finger`` instead of ``master_finger`` before
+    storing the key.
+    """
+    auth = pinned_auth["auth"]
+    auth.opts["syndic_master"] = "syndic-master"
+    auth.opts["syndic_finger"] = salt.utils.crypt.pem_finger(
+        key=pinned_auth["other_pub"], sum_type="sha256"
+    )
+    with pytest.raises(SystemExit):
+        _first_contact(auth, pinned_auth["pinned_pub"])
+    assert not pinned_auth["m_pub_fn"].exists()
+
+    assert _first_contact(auth, pinned_auth["other_pub"]) == "aes-key"
+    assert pinned_auth["m_pub_fn"].exists()
+
+
+def test_sign_in_payload_discards_stored_key_failing_master_finger(pinned_auth):
+    """
+    A stored master key that fails ``master_finger`` is removed before the
+    sign-in token is encrypted to it, and the pinned master is then accepted.
+    This is the state a minion was left in before the key was checked before
+    being stored.
+    """
+    auth = pinned_auth["auth"]
+    m_pub_fn = pinned_auth["m_pub_fn"]
+    m_pub_fn.write_text(crypt.clean_key(pinned_auth["other_pub"]))
+
+    payload = auth.minion_sign_in_payload()
+
+    assert not m_pub_fn.exists()
+    assert "token" not in payload
+    assert _first_contact(auth, pinned_auth["pinned_pub"]) == "aes-key"
+    assert m_pub_fn.read_text() == crypt.clean_key(pinned_auth["pinned_pub"])
+
+
+def test_sign_in_payload_keeps_stored_key_matching_master_finger(pinned_auth):
+    """
+    A stored master key that matches ``master_finger`` is kept, so a master
+    with a different key is still refused as changed.
+    """
+    auth = pinned_auth["auth"]
+    m_pub_fn = pinned_auth["m_pub_fn"]
+    m_pub_fn.write_text(crypt.clean_key(pinned_auth["pinned_pub"]))
+
+    payload = auth.minion_sign_in_payload()
+
+    assert m_pub_fn.exists()
+    assert "token" in payload
+    changed = {"enc": "pub", "pub_key": pinned_auth["other_pub"], "aes": "ignored"}
+    with patch.object(auth, "extract_aes", return_value="aes-key"):
+        assert auth.verify_master(changed) == ""
+    assert m_pub_fn.read_text() == crypt.clean_key(pinned_auth["pinned_pub"])
+
+
+def test_sign_in_payload_keeps_stored_key_without_master_finger(pinned_auth):
+    """
+    Without ``master_finger`` a stored master key is never removed.
+    """
+    auth = pinned_auth["auth"]
+    del auth.opts["master_finger"]
+    m_pub_fn = pinned_auth["m_pub_fn"]
+    m_pub_fn.write_text(crypt.clean_key(pinned_auth["other_pub"]))
+
+    payload = auth.minion_sign_in_payload()
+
+    assert m_pub_fn.exists()
+    assert "token" in payload
